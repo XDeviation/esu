@@ -4,12 +4,12 @@ export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 export const API_ENDPOINTS = {
-  LOGIN: `${API_BASE_URL}/api/v1/token`,
-  REGISTER: `${API_BASE_URL}/api/v1/register`,
-  ENVIRONMENTS: `${API_BASE_URL}/api/v1/environments`,
-  DECKS: `${API_BASE_URL}/api/v1/decks`,
-  MATCH_TYPES: `${API_BASE_URL}/api/v1/match-types`,
-  MATCH_RESULTS: `${API_BASE_URL}/api/v1/match-results`,
+  LOGIN: `${API_BASE_URL}/api/v1/token/`,
+  REGISTER: `${API_BASE_URL}/api/v1/register/`,
+  ENVIRONMENTS: `${API_BASE_URL}/api/v1/environments/`,
+  DECKS: `${API_BASE_URL}/api/v1/decks/`,
+  MATCH_TYPES: `${API_BASE_URL}/api/v1/match-types/`,
+  MATCH_RESULTS: `${API_BASE_URL}/api/v1/match-results/`,
 } as const;
 
 // 创建 axios 实例

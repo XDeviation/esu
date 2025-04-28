@@ -9,11 +9,21 @@ import {
   Space,
   Popconfirm,
   Select,
+  Card,
+  Typography,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
+
+const { TextArea } = Input;
+const { Text } = Typography;
+
+interface Card {
+  name: string;
+  count: number;
+}
 
 interface Deck {
   id: number;
@@ -21,10 +31,17 @@ interface Deck {
   environment_id: number;
   author_id: string;
   description?: string;
+  composition?: Card[];
+  deck_code?: string;
 }
 
 interface Environment {
   id: number;
+  name: string;
+}
+
+interface User {
+  email: string;
   name: string;
 }
 
@@ -42,7 +59,8 @@ const Decks: React.FC = () => {
       setLoading(true);
       const response = await api.get(API_ENDPOINTS.DECKS);
       setDecks(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取卡组列表失败:", error);
       message.error("获取卡组列表失败");
     } finally {
       setLoading(false);
@@ -53,7 +71,8 @@ const Decks: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
       setEnvironments(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取环境列表失败:", error);
       message.error("获取环境列表失败");
     }
   }, []);
@@ -74,16 +93,22 @@ const Decks: React.FC = () => {
 
   const handleEdit = (record: Deck) => {
     setEditingDeck(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      ...record,
+      composition: record.composition
+        ? JSON.stringify(record.composition, null, 2)
+        : undefined,
+    });
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await api.delete(`${API_ENDPOINTS.DECKS}/${id}`);
+      await api.delete(`${API_ENDPOINTS.DECKS}${id}/`);
       message.success("删除成功");
       fetchDecks();
-    } catch {
+    } catch (error) {
+      console.error("删除失败:", error);
       message.error("删除失败");
     }
   };
@@ -91,16 +116,44 @@ const Decks: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      console.log("表单值:", values);
+
+      // 处理卡组构成
+      if (values.composition) {
+        try {
+          values.composition = JSON.parse(values.composition);
+        } catch (error) {
+          console.error("JSON 解析错误:", error);
+          message.error("卡组构成格式错误，请检查 JSON 格式");
+          return;
+        }
+      }
+
+      // 获取当前用户信息
+      const userStr = localStorage.getItem("user");
+      if (!userStr) {
+        message.error("请先登录");
+        return;
+      }
+
+      console.log("提交数据:", values);
+
       if (editingDeck) {
-        await api.put(`${API_ENDPOINTS.DECKS}/${editingDeck.id}`, values);
+        const response = await api.put(
+          `${API_ENDPOINTS.DECKS}${editingDeck.id}/`,
+          values
+        );
+        console.log("更新响应:", response);
         message.success("更新成功");
       } else {
-        await api.post(API_ENDPOINTS.DECKS, values);
+        const response = await api.post(API_ENDPOINTS.DECKS, values);
+        console.log("创建响应:", response);
         message.success("创建成功");
       }
       setModalVisible(false);
       fetchDecks();
-    } catch {
+    } catch (error) {
+      console.error("操作失败:", error);
       message.error("操作失败");
     }
   };
@@ -135,6 +188,13 @@ const Decks: React.FC = () => {
       title: "描述",
       dataIndex: "description",
       key: "description",
+      ellipsis: true,
+    },
+    {
+      title: "卡组码",
+      dataIndex: "deck_code",
+      key: "deck_code",
+      ellipsis: true,
     },
     {
       title: "操作",
@@ -183,6 +243,7 @@ const Decks: React.FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         destroyOnClose
+        width={800}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -205,8 +266,33 @@ const Decks: React.FC = () => {
               ))}
             </Select>
           </Form.Item>
+          <Form.Item
+            name="author_id"
+            label="作者"
+            rules={[{ required: true, message: "请输入作者" }]}
+          >
+            <Input placeholder="请输入作者邮箱" />
+          </Form.Item>
+          <Form.Item
+            name="composition"
+            label={
+              <Space>
+                <span>卡组构成</span>
+                <Text type="secondary" style={{ fontSize: 12 }}></Text>
+              </Space>
+            }
+          >
+            <TextArea
+              rows={6}
+              placeholder="请输入卡组构成（模拟器JSON）"
+              style={{ fontFamily: "monospace" }}
+            />
+          </Form.Item>
+          <Form.Item name="deck_code" label="卡组码">
+            <Input placeholder="请输入卡组码" />
+          </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea />
+            <TextArea rows={4} placeholder="请输入卡组描述" />
           </Form.Item>
         </Form>
       </Modal>

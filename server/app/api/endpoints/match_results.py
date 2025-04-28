@@ -62,10 +62,6 @@ async def create_match_result(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="失败卡组必须是先手或后手卡组之一",
         )
-    if match_result.winning_deck_id == match_result.losing_deck_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="胜利卡组和失败卡组不能相同"
-        )
 
     # 获取新的 ID
     match_result_id = await get_next_id()

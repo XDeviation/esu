@@ -4,7 +4,6 @@ import {
   Button,
   Modal,
   Form,
-  Input,
   message,
   Space,
   Popconfirm,
@@ -34,6 +33,7 @@ interface Deck {
   id: number;
   name: string;
   environment_id: number;
+  author_id: string;
 }
 
 interface MatchType {
@@ -58,7 +58,8 @@ const MatchResults: React.FC = () => {
       setLoading(true);
       const response = await api.get(API_ENDPOINTS.MATCH_RESULTS);
       setMatchResults(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取对局结果列表失败:", error);
       message.error("获取对局结果列表失败");
     } finally {
       setLoading(false);
@@ -69,7 +70,8 @@ const MatchResults: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
       setEnvironments(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取环境列表失败:", error);
       message.error("获取环境列表失败");
     }
   }, []);
@@ -78,7 +80,8 @@ const MatchResults: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.DECKS);
       setDecks(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取卡组列表失败:", error);
       message.error("获取卡组列表失败");
     }
   }, []);
@@ -87,7 +90,8 @@ const MatchResults: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
       setMatchTypes(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取比赛类型列表失败:", error);
       message.error("获取比赛类型列表失败");
     }
   }, []);
@@ -122,10 +126,11 @@ const MatchResults: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await api.delete(`${API_ENDPOINTS.MATCH_RESULTS}/${id}`);
+      await api.delete(`${API_ENDPOINTS.MATCH_RESULTS}${id}/`);
       message.success("删除成功");
       fetchMatchResults();
-    } catch {
+    } catch (error) {
+      console.error("删除失败:", error);
       message.error("删除失败");
     }
   };
@@ -133,19 +138,33 @@ const MatchResults: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      console.log("表单值:", values);
+
+      // 自动设置失败卡组
+      if (values.winning_deck_id === values.first_deck_id) {
+        values.losing_deck_id = values.second_deck_id;
+      } else {
+        values.losing_deck_id = values.first_deck_id;
+      }
+
+      console.log("提交数据:", values);
+
       if (editingMatchResult) {
-        await api.put(
-          `${API_ENDPOINTS.MATCH_RESULTS}/${editingMatchResult.id}`,
+        const response = await api.put(
+          `${API_ENDPOINTS.MATCH_RESULTS}${editingMatchResult.id}/`,
           values
         );
+        console.log("更新响应:", response);
         message.success("更新成功");
       } else {
-        await api.post(API_ENDPOINTS.MATCH_RESULTS, values);
+        const response = await api.post(API_ENDPOINTS.MATCH_RESULTS, values);
+        console.log("创建响应:", response);
         message.success("创建成功");
       }
       setModalVisible(false);
       fetchMatchResults();
-    } catch {
+    } catch (error) {
+      console.error("操作失败:", error);
       message.error("操作失败");
     }
   };
@@ -172,7 +191,7 @@ const MatchResults: React.FC = () => {
       key: "first_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? deck.name : id;
+        return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
     {
@@ -181,7 +200,7 @@ const MatchResults: React.FC = () => {
       key: "second_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? deck.name : id;
+        return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
     {
@@ -190,7 +209,7 @@ const MatchResults: React.FC = () => {
       key: "winning_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? deck.name : id;
+        return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
     {
@@ -199,7 +218,7 @@ const MatchResults: React.FC = () => {
       key: "losing_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? deck.name : id;
+        return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
     {
@@ -258,6 +277,7 @@ const MatchResults: React.FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         destroyOnClose
+        width={800}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -281,7 +301,7 @@ const MatchResults: React.FC = () => {
             <Select>
               {decks.map((deck) => (
                 <Select.Option key={deck.id} value={deck.id}>
-                  {deck.name}
+                  {deck.name} ({deck.author_id})
                 </Select.Option>
               ))}
             </Select>
@@ -294,7 +314,7 @@ const MatchResults: React.FC = () => {
             <Select>
               {decks.map((deck) => (
                 <Select.Option key={deck.id} value={deck.id}>
-                  {deck.name}
+                  {deck.name} ({deck.author_id})
                 </Select.Option>
               ))}
             </Select>
@@ -307,20 +327,7 @@ const MatchResults: React.FC = () => {
             <Select>
               {decks.map((deck) => (
                 <Select.Option key={deck.id} value={deck.id}>
-                  {deck.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="losing_deck_id"
-            label="失败卡组"
-            rules={[{ required: true, message: "请选择失败卡组" }]}
-          >
-            <Select>
-              {decks.map((deck) => (
-                <Select.Option key={deck.id} value={deck.id}>
-                  {deck.name}
+                  {deck.name} ({deck.author_id})
                 </Select.Option>
               ))}
             </Select>

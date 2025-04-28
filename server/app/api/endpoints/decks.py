@@ -31,7 +31,6 @@ async def create_deck(deck: DeckCreate, current_user: dict = Depends(get_current
     # 创建卡组
     deck_dict = deck.model_dump()
     deck_dict["id"] = deck_id
-    deck_dict["author_id"] = current_user["email"]
 
     await db.decks.insert_one(deck_dict)
     return Deck(**deck_dict)
