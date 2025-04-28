@@ -40,11 +40,6 @@ interface Environment {
   name: string;
 }
 
-interface User {
-  email: string;
-  name: string;
-}
-
 const Decks: React.FC = () => {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
