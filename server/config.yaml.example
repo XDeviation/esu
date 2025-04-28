@@ -1,0 +1,26 @@
+app:
+  name: "ESU API"
+  version: "1.0.0"
+  debug: true
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+cors:
+  allow_origins:
+    - "http://localhost:5173"
+  allow_credentials: true
+  allow_methods:
+    - "*"
+  allow_headers:
+    - "*"
+
+jwt:
+  secret_key: "your-secret-key-here"
+  algorithm: "HS256"
+  access_token_expire_minutes: 30
+
+mongodb:
+  uri: "mongodb://username:password@localhost:27017"
+  database: "database_name"

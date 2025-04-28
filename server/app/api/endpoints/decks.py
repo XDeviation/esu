@@ -1,0 +1,123 @@
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+
+from ...db.mongodb import db
+from ...models.deck import Deck, DeckCreate
+from ..deps import get_current_user
+
+router = APIRouter()
+
+
+async def get_next_id():
+    result = await db.counters.find_one_and_update(
+        {"name": "deck_id"}, {"$inc": {"seq": 1}}, return_document=True
+    )
+    return result["seq"]
+
+
+@router.post("/", response_model=Deck)
+async def create_deck(deck: DeckCreate, current_user: dict = Depends(get_current_user)):
+    # 检查环境是否存在
+    if not await db.environments.find_one({"id": deck.environment_id}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="环境不存在"
+        )
+
+    # 获取新的 ID
+    deck_id = await get_next_id()
+
+    # 创建卡组
+    deck_dict = deck.model_dump()
+    deck_dict["id"] = deck_id
+    deck_dict["author_id"] = current_user["email"]
+
+    await db.decks.insert_one(deck_dict)
+    return Deck(**deck_dict)
+
+
+@router.get("/", response_model=List[Deck])
+async def read_decks(
+    environment_id: int = None, author_id: str = None, search: str = None
+):
+    query = {}
+    if environment_id:
+        query["environment_id"] = environment_id
+    if author_id:
+        query["author_id"] = author_id
+    if search:
+        query["$text"] = {"$search": search}
+
+    decks = await db.decks.find(query).to_list(length=None)
+    return [Deck(**deck) for deck in decks]
+
+
+@router.get("/{deck_id}", response_model=Deck)
+async def read_deck(deck_id: int):
+    deck = await db.decks.find_one({"id": deck_id})
+    if not deck:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
+    return Deck(**deck)
+
+
+@router.put("/{deck_id}", response_model=Deck)
+async def update_deck(
+    deck_id: int, deck: DeckCreate, current_user: dict = Depends(get_current_user)
+):
+    # 检查卡组是否存在
+    existing = await db.decks.find_one({"id": deck_id})
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
+
+    # 检查权限
+    if existing["author_id"] != current_user["email"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="没有权限修改此卡组"
+        )
+
+    # 检查环境是否存在
+    if not await db.environments.find_one({"id": deck.environment_id}):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="环境不存在"
+        )
+
+    # 更新卡组
+    deck_dict = deck.model_dump()
+    await db.decks.update_one({"id": deck_id}, {"$set": deck_dict})
+
+    return Deck(**{**deck_dict, "id": deck_id})
+
+
+@router.delete("/{deck_id}")
+async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_user)):
+    # 检查卡组是否存在
+    deck = await db.decks.find_one({"id": deck_id})
+    if not deck:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
+
+    # 检查权限
+    if deck["author_id"] != current_user["email"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="没有权限删除此卡组"
+        )
+
+    # 检查是否有对局使用此卡组
+    if await db.match_results.find_one(
+        {
+            "$or": [
+                {"first_deck_id": deck_id},
+                {"second_deck_id": deck_id},
+                {"winning_deck_id": deck_id},
+                {"losing_deck_id": deck_id},
+            ]
+        }
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="无法删除已在对局中使用的卡组",
+        )
+
+    # 删除卡组
+    await db.decks.delete_one({"id": deck_id})
+    return {"message": "卡组已删除"}
