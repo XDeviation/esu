@@ -3,7 +3,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .api.endpoints import auth, decks, environments, match_results, match_types
+from .api.endpoints import (
+    auth,
+    decks,
+    environments,
+    match_results,
+    match_types,
+    statistics,
+)
 from .core.config import config
 from .db.mongodb import db
 
@@ -43,3 +50,4 @@ app.include_router(
 app.include_router(
     match_results.router, prefix="/api/v1/match-results", tags=["match-results"]
 )
+app.include_router(statistics.router, prefix="/api/v1", tags=["statistics"])

@@ -11,6 +11,8 @@ import Environments from "./components/Environments";
 import Decks from "./components/Decks";
 import MatchTypes from "./components/MatchTypes";
 import MatchResults from "./components/MatchResults";
+import Statistics from "./components/Statistics";
+import DeckMatchups from "./components/DeckMatchups";
 import "./App.css";
 
 const App: React.FC = () => {
@@ -23,6 +25,8 @@ const App: React.FC = () => {
           <Route path="decks" element={<Decks />} />
           <Route path="match-types" element={<MatchTypes />} />
           <Route path="match-results" element={<MatchResults />} />
+          <Route path="statistics" element={<Statistics />} />
+          <Route path="deck-matchups" element={<DeckMatchups />} />
           <Route index element={<Navigate to="environments" replace />} />
         </Route>
       </Routes>

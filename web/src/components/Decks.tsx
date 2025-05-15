@@ -266,7 +266,7 @@ const Decks: React.FC = () => {
             label="作者"
             rules={[{ required: true, message: "请输入作者" }]}
           >
-            <Input placeholder="请输入作者邮箱" />
+            <Input placeholder="请输入作者名字" />
           </Form.Item>
           <Form.Item
             name="composition"

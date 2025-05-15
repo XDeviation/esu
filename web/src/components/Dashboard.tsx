@@ -1,11 +1,14 @@
 import React from "react";
 import { Layout, Menu, theme } from "antd";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   EnvironmentOutlined,
-  TrophyOutlined,
-  HistoryOutlined,
+  AppstoreOutlined,
+  TagsOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
 } from "@ant-design/icons";
-import { useNavigate, useLocation, Outlet } from "react-router-dom";
 
 const { Header, Content, Sider } = Layout;
 
@@ -16,14 +19,38 @@ const Dashboard: React.FC = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  const getSelectedKey = () => {
-    const path = location.pathname;
-    if (path.includes("/environments")) return "environments";
-    if (path.includes("/decks")) return "decks";
-    if (path.includes("/match-types")) return "match-types";
-    if (path.includes("/match-results")) return "match-results";
-    return "environments";
-  };
+  const menuItems = [
+    {
+      key: "environments",
+      icon: <EnvironmentOutlined />,
+      label: "环境管理",
+    },
+    {
+      key: "decks",
+      icon: <AppstoreOutlined />,
+      label: "卡组管理",
+    },
+    {
+      key: "match-types",
+      icon: <TagsOutlined />,
+      label: "对局类型",
+    },
+    {
+      key: "match-results",
+      icon: <BarChartOutlined />,
+      label: "对局记录",
+    },
+    {
+      key: "statistics",
+      icon: <LineChartOutlined />,
+      label: "战绩统计",
+    },
+    {
+      key: "deck-matchups",
+      icon: <PieChartOutlined />,
+      label: "卡组对战",
+    },
+  ];
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -36,40 +63,16 @@ const Dashboard: React.FC = () => {
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
         }}
       >
-        <h1 style={{ margin: 0, color: "#1890ff" }}>TCG 战绩管理器</h1>
+        <h1 style={{ margin: 0, color: "#1890ff" }}>SVEC 战绩管理器</h1>
       </Header>
       <Layout>
         <Sider width={200} style={{ background: colorBgContainer }}>
           <Menu
             mode="inline"
-            selectedKeys={[getSelectedKey()]}
+            selectedKeys={[location.pathname.split("/")[1] || "environments"]}
             style={{ height: "100%", borderRight: 0 }}
-            items={[
-              {
-                key: "environments",
-                icon: <EnvironmentOutlined />,
-                label: "环境管理",
-                onClick: () => navigate("/environments"),
-              },
-              {
-                key: "decks",
-                icon: <EnvironmentOutlined />,
-                label: "卡组管理",
-                onClick: () => navigate("/decks"),
-              },
-              {
-                key: "match-types",
-                icon: <TrophyOutlined />,
-                label: "比赛类型",
-                onClick: () => navigate("/match-types"),
-              },
-              {
-                key: "match-results",
-                icon: <HistoryOutlined />,
-                label: "对局记录",
-                onClick: () => navigate("/match-results"),
-              },
-            ]}
+            items={menuItems}
+            onClick={({ key }) => navigate(key)}
           />
         </Sider>
         <Layout style={{ padding: "24px" }}>
