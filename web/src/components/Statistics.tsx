@@ -44,7 +44,6 @@ const Statistics: React.FC = () => {
     null
   );
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>("");
   const location = useLocation();
 
   const fetchEnvironments = useCallback(async () => {
@@ -75,14 +74,12 @@ const Statistics: React.FC = () => {
       if (!selectedEnvironment) return;
 
       setLoading(true);
-      setError("");
       try {
         const response = await api.get(
           `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/statistics`
         );
         setStatistics(response.data);
       } catch (err) {
-        setError("获取统计数据失败");
         console.error(err);
       } finally {
         setLoading(false);
@@ -186,8 +183,6 @@ const Statistics: React.FC = () => {
           </Col>
         </Row>
       </Card>
-
-      {error && message.error(error)}
 
       <Card>
         <Spin spinning={loading}>
