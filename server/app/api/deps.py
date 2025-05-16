@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from ..core.config import config
 from ..db.mongodb import db
-from ..models.user import User, UserInDB
+from ..models.user import User, UserInDB, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -44,3 +44,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     if user is None:
         raise credentials_exception
     return user
+
+
+async def get_current_admin(current_user: UserInDB = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="需要超级管理员权限"
+        )
+    return current_user
+
+
+async def get_current_moderator(current_user: UserInDB = Depends(get_current_user)):
+    if current_user.role not in [UserRole.ADMIN, UserRole.MODERATOR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员或版主权限"
+        )
+    return current_user

@@ -5,7 +5,8 @@ from pydantic import BaseModel
 
 from ...db.mongodb import db
 from ...models.deck import Deck, DeckCreate
-from ..deps import get_current_user
+from ...models.user import UserRole
+from ..deps import get_current_admin, get_current_moderator, get_current_user
 
 router = APIRouter()
 
@@ -18,7 +19,9 @@ async def get_next_id():
 
 
 @router.post("/", response_model=Deck)
-async def create_deck(deck: DeckCreate, current_user: dict = Depends(get_current_user)):
+async def create_deck(
+    deck: DeckCreate, current_user: dict = Depends(get_current_moderator)
+):
     # 检查环境是否存在
     if not await db.environments.find_one({"id": deck.environment_id}):
         raise HTTPException(
@@ -31,6 +34,7 @@ async def create_deck(deck: DeckCreate, current_user: dict = Depends(get_current
     # 创建卡组
     deck_dict = deck.model_dump()
     deck_dict["id"] = deck_id
+    deck_dict["author_id"] = current_user.email
 
     await db.decks.insert_one(deck_dict)
     return Deck(**deck_dict)
@@ -62,7 +66,7 @@ async def read_deck(deck_id: int):
 
 @router.put("/{deck_id}", response_model=Deck)
 async def update_deck(
-    deck_id: int, deck: DeckCreate, current_user: dict = Depends(get_current_user)
+    deck_id: int, deck: DeckCreate, current_user: dict = Depends(get_current_moderator)
 ):
     # 检查卡组是否存在
     existing = await db.decks.find_one({"id": deck_id})
@@ -70,7 +74,7 @@ async def update_deck(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
 
     # 检查权限
-    if existing["author_id"] != current_user["email"]:
+    if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="没有权限修改此卡组"
         )
@@ -89,17 +93,11 @@ async def update_deck(
 
 
 @router.delete("/{deck_id}")
-async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_user)):
+async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_admin)):
     # 检查卡组是否存在
     deck = await db.decks.find_one({"id": deck_id})
     if not deck:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
-
-    # 检查权限
-    if deck["author_id"] != current_user["email"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="没有权限删除此卡组"
-        )
 
     # 检查是否有对局使用此卡组
     if await db.match_results.find_one(
