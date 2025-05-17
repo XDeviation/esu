@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel
 
 
@@ -19,3 +21,7 @@ class MatchResult(MatchResultBase):
 
     class Config:
         from_attributes = True
+
+
+class BatchMatchResultCreate(BaseModel):
+    match_results: List[MatchResultCreate]
