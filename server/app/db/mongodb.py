@@ -11,7 +11,7 @@ class MongoDB:
     async def connect_to_database(cls):
         try:
             cls.client = AsyncIOMotorClient(config["mongodb"]["uri"])
-            cls.db = cls.client.get_database()
+            cls.db = cls.client[config["mongodb"]["database"]]
             # 测试连接
             await cls.db.command("ping")
 

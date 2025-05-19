@@ -64,7 +64,8 @@ const MatchResults: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get(API_ENDPOINTS.MATCH_RESULTS);
-      setMatchResults(response.data);
+      const sortedData = response.data.sort((a: MatchResult, b: MatchResult) => b.id - a.id);
+      setMatchResults(sortedData);
     } catch (error) {
       console.error("获取对局结果列表失败:", error);
       message.error("获取对局结果列表失败");
@@ -182,6 +183,19 @@ const MatchResults: React.FC = () => {
     });
   };
 
+  const handleOpenBatchModal = () => {
+    // 设置默认值为最新的环境和比赛类型
+    if (environments.length > 0) {
+      const latestEnv = environments[environments.length - 1];
+      batchForm.setFieldValue("environment_id", latestEnv.id);
+    }
+    if (matchTypes.length > 0) {
+      const latestMatchType = matchTypes[matchTypes.length - 1];
+      batchForm.setFieldValue("match_type_id", latestMatchType.id);
+    }
+    setBatchModalVisible(true);
+  };
+
   const columns = [
     {
       title: "ID",
@@ -274,7 +288,7 @@ const MatchResults: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={() => setBatchModalVisible(true)}>
+        <Button type="primary" onClick={handleOpenBatchModal}>
           添加战绩
         </Button>
       </div>

@@ -28,6 +28,10 @@ interface MatchupStats {
   wins: number;
   losses: number;
   win_rate: number;
+  first_hand_total?: number;
+  first_hand_wins?: number;
+  second_hand_total?: number;
+  second_hand_wins?: number;
 }
 
 interface DeckMatchup {
@@ -50,6 +54,7 @@ interface TableRowData {
 const DeckMatchups: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
+  const [selectedHand, setSelectedHand] = useState<string>("all");
   const [statistics, setStatistics] = useState<MatchupStatistics | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
@@ -123,11 +128,39 @@ const DeckMatchups: React.FC = () => {
         width: 100,
         render: (value: MatchupStats | null) => {
           if (!value) return "-";
+          
+          let displayStats = value;
+          if (selectedHand === "first" && value.first_hand_total) {
+            displayStats = {
+              ...value,
+              total: value.first_hand_total,
+              wins: value.first_hand_wins || 0,
+              win_rate: value.first_hand_wins ? (value.first_hand_wins / value.first_hand_total * 100) : 0
+            };
+          } else if (selectedHand === "second" && value.second_hand_total) {
+            displayStats = {
+              ...value,
+              total: value.second_hand_total,
+              wins: value.second_hand_wins || 0,
+              win_rate: value.second_hand_wins ? (value.second_hand_wins / value.second_hand_total * 100) : 0
+            };
+          }
+          
+          const backgroundColor = displayStats.win_rate > 50 
+            ? 'rgba(82, 196, 26, 0.1)'  // 柔和的绿色
+            : displayStats.win_rate < 50 
+              ? 'rgba(255, 77, 79, 0.1)'  // 柔和的红色
+              : 'transparent';  // 50%或没有数据时保持透明
+
           return (
-            <div style={{ textAlign: "center" }}>
-              <div>{value.win_rate}%</div>
+            <div style={{ 
+              textAlign: "center",
+              backgroundColor,
+              padding: '4px 0'
+            }}>
+              <div>{displayStats.win_rate.toFixed(1)}%</div>
               <div style={{ fontSize: "12px", color: "#999" }}>
-                {value.wins}/{value.total}
+                {displayStats.wins}/{displayStats.total}
               </div>
             </div>
           );
@@ -178,6 +211,16 @@ const DeckMatchups: React.FC = () => {
                     {env.name}
                   </Select.Option>
                 ))}
+              </Select>
+              <Select
+                value={selectedHand}
+                onChange={(value) => setSelectedHand(value)}
+                style={{ width: 120 }}
+                placeholder="请选择先后手"
+              >
+                <Select.Option value="all">全部</Select.Option>
+                <Select.Option value="first">先手</Select.Option>
+                <Select.Option value="second">后手</Select.Option>
               </Select>
             </Space>
           </Col>

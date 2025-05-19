@@ -118,8 +118,10 @@ async def get_deck_matchups(environment_id: int, current_user: dict = get_curren
                     continue
                 if first_deck_id == deck_id:
                     opponent_id = str(second_deck_id)
+                    is_first_hand = True
                 else:
                     opponent_id = str(first_deck_id)
+                    is_first_hand = False
                 if opponent_id in deck_map:
                     if opponent_id not in opponent_stats:
                         opponent_stats[opponent_id] = {
@@ -128,12 +130,25 @@ async def get_deck_matchups(environment_id: int, current_user: dict = get_curren
                             "wins": 0,
                             "losses": 0,
                             "win_rate": 0,
+                            "first_hand_total": 0,
+                            "first_hand_wins": 0,
+                            "second_hand_total": 0,
+                            "second_hand_wins": 0,
                         }
 
                     stats = opponent_stats[opponent_id]
                     stats["total"] += 1
+                    if is_first_hand:
+                        stats["first_hand_total"] += 1
+                    else:
+                        stats["second_hand_total"] += 1
+
                     if match["winning_deck_id"] == deck_id:
                         stats["wins"] += 1
+                        if is_first_hand:
+                            stats["first_hand_wins"] += 1
+                        else:
+                            stats["second_hand_wins"] += 1
                     elif match["losing_deck_id"] == deck_id:
                         stats["losses"] += 1
 
