@@ -125,45 +125,92 @@ const DeckMatchups: React.FC = () => {
         title: deck.deck_name,
         dataIndex: deckId,
         key: deckId,
-        width: 100,
+        width: 150,
         render: (value: MatchupStats | null) => {
           if (!value) return "-";
           
-          let displayStats = value;
-          if (selectedHand === "first" && value.first_hand_total) {
-            displayStats = {
-              ...value,
-              total: value.first_hand_total,
-              wins: value.first_hand_wins || 0,
-              win_rate: value.first_hand_wins ? (value.first_hand_wins / value.first_hand_total * 100) : 0
-            };
-          } else if (selectedHand === "second" && value.second_hand_total) {
-            displayStats = {
-              ...value,
-              total: value.second_hand_total,
-              wins: value.second_hand_wins || 0,
-              win_rate: value.second_hand_wins ? (value.second_hand_wins / value.second_hand_total * 100) : 0
-            };
-          }
-          
-          const backgroundColor = displayStats.win_rate > 50 
-            ? 'rgba(82, 196, 26, 0.1)'  // 柔和的绿色
-            : displayStats.win_rate < 50 
-              ? 'rgba(255, 77, 79, 0.1)'  // 柔和的红色
-              : 'transparent';  // 50%或没有数据时保持透明
+          if (selectedHand === "both") {
+            const firstHandWinRate = value.first_hand_wins && value.first_hand_total 
+              ? (value.first_hand_wins / value.first_hand_total * 100) 
+              : 0;
+            const secondHandWinRate = value.second_hand_wins && value.second_hand_total 
+              ? (value.second_hand_wins / value.second_hand_total * 100) 
+              : 0;
+            
+            const totalWinRate = value.win_rate;
+            const backgroundColor = totalWinRate > 50 
+              ? 'rgba(82, 196, 26, 0.1)'
+              : totalWinRate < 50 
+                ? 'rgba(255, 77, 79, 0.1)'
+                : 'transparent';
 
-          return (
-            <div style={{ 
-              textAlign: "center",
-              backgroundColor,
-              padding: '4px 0'
-            }}>
-              <div>{displayStats.win_rate.toFixed(1)}%</div>
-              <div style={{ fontSize: "12px", color: "#999" }}>
-                {displayStats.wins}/{displayStats.total}
+            return (
+              <div style={{ 
+                textAlign: "center",
+                backgroundColor,
+                padding: '4px 0'
+              }}>
+                <div>{totalWinRate.toFixed(1)}%</div>
+                <div style={{ fontSize: "12px", color: "#999" }}>
+                  {value.wins}/{value.total}
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-around',
+                  marginTop: '4px',
+                  fontSize: '12px',
+                  color: '#666'
+                }}>
+                  <div>
+                    先手: {firstHandWinRate.toFixed(1)}%
+                    <br />
+                    {value.first_hand_wins || 0}/{value.first_hand_total || 0}
+                  </div>
+                  <div>
+                    后手: {secondHandWinRate.toFixed(1)}%
+                    <br />
+                    {value.second_hand_wins || 0}/{value.second_hand_total || 0}
+                  </div>
+                </div>
               </div>
-            </div>
-          );
+            );
+          } else {
+            let displayStats = value;
+            if (selectedHand === "first" && value.first_hand_total) {
+              displayStats = {
+                ...value,
+                total: value.first_hand_total,
+                wins: value.first_hand_wins || 0,
+                win_rate: value.first_hand_wins ? (value.first_hand_wins / value.first_hand_total * 100) : 0
+              };
+            } else if (selectedHand === "second" && value.second_hand_total) {
+              displayStats = {
+                ...value,
+                total: value.second_hand_total,
+                wins: value.second_hand_wins || 0,
+                win_rate: value.second_hand_wins ? (value.second_hand_wins / value.second_hand_total * 100) : 0
+              };
+            }
+            
+            const backgroundColor = displayStats.win_rate > 50 
+              ? 'rgba(82, 196, 26, 0.1)'
+              : displayStats.win_rate < 50 
+                ? 'rgba(255, 77, 79, 0.1)'
+                : 'transparent';
+
+            return (
+              <div style={{ 
+                textAlign: "center",
+                backgroundColor,
+                padding: '4px 0'
+              }}>
+                <div>{displayStats.win_rate.toFixed(1)}%</div>
+                <div style={{ fontSize: "12px", color: "#999" }}>
+                  {displayStats.wins}/{displayStats.total}
+                </div>
+              </div>
+            );
+          }
         },
       });
     });
@@ -218,9 +265,8 @@ const DeckMatchups: React.FC = () => {
                 style={{ width: 120 }}
                 placeholder="请选择先后手"
               >
-                <Select.Option value="all">全部</Select.Option>
-                <Select.Option value="first">先手</Select.Option>
-                <Select.Option value="second">后手</Select.Option>
+                <Select.Option value="all">默认</Select.Option>
+                <Select.Option value="both">显示先后手</Select.Option>
               </Select>
             </Space>
           </Col>

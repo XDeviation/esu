@@ -190,7 +190,7 @@ const MatchResults: React.FC = () => {
       batchForm.setFieldValue("environment_id", latestEnv.id);
     }
     if (matchTypes.length > 0) {
-      const latestMatchType = matchTypes[matchTypes.length - 1];
+      const latestMatchType = matchTypes[0];
       batchForm.setFieldValue("match_type_id", latestMatchType.id);
     }
     setBatchModalVisible(true);
