@@ -1,4 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from fastapi import Depends
 
 from ..core.config import config
 
@@ -113,3 +114,6 @@ class MongoDB:
 
 
 db = MongoDB()
+
+async def get_database() -> AsyncIOMotorDatabase:
+    return db.db

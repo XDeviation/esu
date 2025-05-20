@@ -37,6 +37,8 @@ interface EnvironmentStatistics {
   deck_statistics: DeckStatistics[];
 }
 
+type SortType = "total_matches_desc" | "win_rate_desc";
+
 const Statistics: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
@@ -44,6 +46,7 @@ const Statistics: React.FC = () => {
     null
   );
   const [loading, setLoading] = useState<boolean>(false);
+  const [sortType, setSortType] = useState<SortType>("total_matches_desc");
   const location = useLocation();
 
   const fetchEnvironments = useCallback(async () => {
@@ -150,6 +153,20 @@ const Statistics: React.FC = () => {
 
   const totalStats = getTotalStats();
 
+  const getSortedStatistics = () => {
+    if (!statistics) return [];
+    
+    const sortedStats = [...statistics.deck_statistics];
+    switch (sortType) {
+      case "total_matches_desc":
+        return sortedStats.sort((a, b) => b.total_matches - a.total_matches);
+      case "win_rate_desc":
+        return sortedStats.sort((a, b) => b.win_rate - a.win_rate);
+      default:
+        return sortedStats;
+    }
+  };
+
   return (
     <div className="p-6">
       <Card className="mb-6">
@@ -172,6 +189,15 @@ const Statistics: React.FC = () => {
                   </Select.Option>
                 ))}
               </Select>
+              <Select
+                value={sortType}
+                onChange={(value) => setSortType(value)}
+                style={{ width: 150 }}
+                placeholder="排序方式"
+              >
+                <Select.Option value="total_matches_desc">总场数降序</Select.Option>
+                <Select.Option value="win_rate_desc">胜率降序</Select.Option>
+              </Select>
               {statistics && (
                 <Statistic
                   title="总场次"
@@ -188,7 +214,7 @@ const Statistics: React.FC = () => {
         <Spin spinning={loading}>
           {statistics && (
             <Table
-              dataSource={statistics.deck_statistics}
+              dataSource={getSortedStatistics()}
               columns={columns}
               rowKey="deck_id"
               pagination={false}

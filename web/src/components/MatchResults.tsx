@@ -12,6 +12,8 @@ import {
   Row,
   Col,
   Radio,
+  Input,
+  Spin,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import api, { API_ENDPOINTS } from "../config/api";
@@ -56,6 +58,7 @@ const MatchResults: React.FC = () => {
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [loading, setLoading] = useState(false);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [editingMatch, setEditingMatch] = useState<MatchResult | null>(null);
   const [form] = Form.useForm();
   const [batchForm] = Form.useForm();
   const location = useLocation();
@@ -112,12 +115,36 @@ const MatchResults: React.FC = () => {
       fetchDecks();
       fetchMatchTypes();
     }
+
+    // 检查URL参数
+    const params = new URLSearchParams(location.search);
+    const openModal = params.get('open_modal');
+    const firstDeckId = params.get('first_deck_id');
+    const secondDeckId = params.get('second_deck_id');
+    const environmentId = params.get('environment_id');
+    const matchTypeId = params.get('match_type_id');
+
+    if (openModal === 'true' && firstDeckId && secondDeckId) {
+      // 设置表单数据
+      batchForm.setFieldsValue({
+        first_deck_id: firstDeckId,
+        second_deck_id: secondDeckId,
+        environment_id: environmentId,
+        match_type_id: matchTypeId,
+        matches: [{ first_player: "first", win: "first" }]
+      });
+      
+      // 打开模态框
+      setBatchModalVisible(true);
+    }
   }, [
     location.pathname,
     fetchMatchResults,
     fetchEnvironments,
     fetchDecks,
     fetchMatchTypes,
+    location.search,
+    batchForm,
   ]);
 
   const handleEdit = (record: MatchResult) => {

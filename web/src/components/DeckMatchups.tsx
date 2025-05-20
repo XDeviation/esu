@@ -10,14 +10,30 @@ import {
   Space,
   Row,
   Col,
+  Modal,
+  Form,
+  Button,
+  Radio,
 } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api from "../config/api";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const { Title } = Typography;
 
 interface Environment {
+  id: number;
+  name: string;
+}
+
+interface Deck {
+  id: number;
+  name: string;
+  author_id: string;
+}
+
+interface MatchType {
   id: number;
   name: string;
 }
@@ -51,6 +67,11 @@ interface TableRowData {
   [key: string]: string | MatchupStats | null;
 }
 
+interface BatchMatch {
+  first_player: "first" | "second";
+  win: "first" | "second";
+}
+
 const DeckMatchups: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
@@ -58,7 +79,12 @@ const DeckMatchups: React.FC = () => {
   const [statistics, setStatistics] = useState<MatchupStatistics | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [batchModalVisible, setBatchModalVisible] = useState<boolean>(false);
+  const [batchForm] = Form.useForm();
+  const [decks, setDecks] = useState<Deck[]>([]);
+  const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -77,11 +103,33 @@ const DeckMatchups: React.FC = () => {
     }
   }, []);
 
+  const fetchDecks = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.DECKS);
+      setDecks(response.data);
+    } catch (error) {
+      console.error("获取卡组列表失败:", error);
+      message.error("获取卡组列表失败");
+    }
+  }, []);
+
+  const fetchMatchTypes = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
+      setMatchTypes(response.data);
+    } catch (error) {
+      console.error("获取比赛类型列表失败:", error);
+      message.error("获取比赛类型列表失败");
+    }
+  }, []);
+
   useEffect(() => {
     if (location.pathname === "/deck-matchups") {
       fetchEnvironments();
+      fetchDecks();
+      fetchMatchTypes();
     }
-  }, [location.pathname, fetchEnvironments]);
+  }, [location.pathname, fetchEnvironments, fetchDecks, fetchMatchTypes]);
 
   useEffect(() => {
     const fetchMatchups = async () => {
@@ -105,6 +153,85 @@ const DeckMatchups: React.FC = () => {
     fetchMatchups();
   }, [selectedEnvironment]);
 
+  const handleCellClick = (deckId: string, opponentId: string) => {
+    if (!statistics) return;
+    
+    const deck = statistics.matchup_statistics[deckId];
+    const opponent = statistics.matchup_statistics[opponentId];
+    
+    if (!deck || !opponent) return;
+
+    // 设置表单数据
+    batchForm.setFieldsValue({
+      first_deck_id: parseInt(deckId),  // 将字符串转换为数字
+      second_deck_id: parseInt(opponentId),  // 将字符串转换为数字
+      environment_id: parseInt(selectedEnvironment),  // 将环境ID转换为数字
+      match_type_id: matchTypes.length > 0 ? matchTypes[0].id : undefined,
+      matches: [{ first_player: "first", win: "first" }]
+    });
+    
+    // 打开模态框
+    setBatchModalVisible(true);
+  };
+
+  const handleBatchSubmit = async (values: {
+    environment_id: number;
+    match_type_id: number;
+    first_deck_id: number;
+    second_deck_id: number;
+    matches: BatchMatch[];
+  }) => {
+    try {
+      const {
+        environment_id,
+        match_type_id,
+        first_deck_id,
+        second_deck_id,
+        matches,
+      } = values;
+      const matchResults = matches.map((match) => {
+        const winning_deck_id =
+          match.win === "first" ? first_deck_id : second_deck_id;
+        const losing_deck_id =
+          match.win === "first" ? second_deck_id : first_deck_id;
+        
+        // 根据first_player决定先手和后手卡组
+        const actual_first_deck_id = match.first_player === "first" ? first_deck_id : second_deck_id;
+        const actual_second_deck_id = match.first_player === "first" ? second_deck_id : first_deck_id;
+        
+        return {
+          environment_id,
+          match_type_id,
+          first_deck_id: actual_first_deck_id,
+          second_deck_id: actual_second_deck_id,
+          winning_deck_id,
+          losing_deck_id,
+        };
+      });
+
+      await api.post(`${API_ENDPOINTS.MATCH_RESULTS}batch/`, {
+        match_results: matchResults,
+      });
+      message.success("添加成功");
+      setBatchModalVisible(false);
+      batchForm.resetFields();
+      // 刷新对战数据
+      const response = await api.get(
+        `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/deck-matchups`
+      );
+      setStatistics(response.data);
+    } catch {
+      message.error("添加失败");
+    }
+  };
+
+  const handleAddBatchMatch = () => {
+    const matches = batchForm.getFieldValue("matches") || [];
+    batchForm.setFieldsValue({
+      matches: [...matches, { first_player: "first", win: "first" }],
+    });
+  };
+
   const generateColumns = (): ColumnsType<TableRowData> => {
     if (!statistics) return [];
 
@@ -126,6 +253,10 @@ const DeckMatchups: React.FC = () => {
         dataIndex: deckId,
         key: deckId,
         width: 150,
+        onCell: (record) => ({
+          onClick: () => handleCellClick(record.key, deckId),
+          style: { cursor: 'pointer' }
+        }),
         render: (value: MatchupStats | null) => {
           if (!value) return "-";
           
@@ -288,6 +419,203 @@ const DeckMatchups: React.FC = () => {
           </Card>
         )}
       </Spin>
+
+      <Modal
+        title="添加战绩"
+        open={batchModalVisible}
+        onOk={() => batchForm.submit()}
+        onCancel={() => setBatchModalVisible(false)}
+        destroyOnClose
+        width={800}
+      >
+        <Form
+          form={batchForm}
+          layout="vertical"
+          initialValues={{
+            matches: [
+              {
+                first_player: "first",
+                win: "first",
+              },
+            ],
+          }}
+          onFinish={handleBatchSubmit}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="environment_id"
+                label="环境"
+                rules={[{ required: true, message: "请选择环境" }]}
+              >
+                <Select>
+                  {environments.map((env) => (
+                    <Select.Option key={env.id} value={env.id}>
+                      {env.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="match_type_id"
+                label="比赛类型"
+                rules={[{ required: true, message: "请选择比赛类型" }]}
+              >
+                <Select>
+                  {matchTypes.map((type) => (
+                    <Select.Option key={type.id} value={type.id}>
+                      {type.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="first_deck_id"
+                label="卡组1"
+                rules={[{ required: true, message: "请选择卡组1" }]}
+              >
+                <Select>
+                  {decks.map((deck) => (
+                    <Select.Option key={deck.id} value={deck.id}>
+                      {deck.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="second_deck_id"
+                label="卡组2"
+                rules={[{ required: true, message: "请选择卡组2" }]}
+              >
+                <Select>
+                  {decks.map((deck) => (
+                    <Select.Option key={deck.id} value={deck.id}>
+                      {deck.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <div style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 8,
+              }}
+            >
+              <span>对战记录</span>
+              <Button
+                type="dashed"
+                onClick={handleAddBatchMatch}
+                icon={<PlusOutlined />}
+              >
+                添加对战
+              </Button>
+            </div>
+            <Form.List name="matches">
+              {(fields, { remove }) => (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                  }}
+                >
+                  {fields.map((field, index) => {
+                    const firstDeckId =
+                      batchForm.getFieldValue("first_deck_id");
+                    const secondDeckId =
+                      batchForm.getFieldValue("second_deck_id");
+                    const firstDeck = decks.find((d) => d.id === firstDeckId);
+                    const secondDeck = decks.find((d) => d.id === secondDeckId);
+                    const firstDeckName = firstDeck
+                      ? `${firstDeck.name} (${firstDeck.author_id})`
+                      : "卡组1";
+                    const secondDeckName = secondDeck
+                      ? `${secondDeck.name} (${secondDeck.author_id})`
+                      : "卡组2";
+
+                    return (
+                      <Card
+                        key={`match-${field.key}`}
+                        title={`对战 ${index + 1}`}
+                        extra={
+                          fields.length > 1 && (
+                            <Button
+                              type="link"
+                              danger
+                              onClick={() => remove(field.name)}
+                            >
+                              删除
+                            </Button>
+                          )
+                        }
+                      >
+                        <Row gutter={16} align="middle">
+                          <Col span={6}>
+                            <div
+                              style={{
+                                textAlign: "center",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              先手
+                            </div>
+                          </Col>
+                          <Col span={6}>
+                            <Form.Item
+                              key={`first-${field.key}`}
+                              name={[field.name, "first_player"]}
+                              noStyle
+                            >
+                              <Radio.Group>
+                                <Radio value="first">{firstDeckName}</Radio>
+                                <Radio value="second">{secondDeckName}</Radio>
+                              </Radio.Group>
+                            </Form.Item>
+                          </Col>
+                          <Col span={6}>
+                            <div
+                              style={{
+                                textAlign: "center",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              胜利
+                            </div>
+                          </Col>
+                          <Col span={6}>
+                            <Form.Item
+                              key={`win-${field.key}`}
+                              name={[field.name, "win"]}
+                              noStyle
+                            >
+                              <Radio.Group>
+                                <Radio value="first">{firstDeckName}</Radio>
+                                <Radio value="second">{secondDeckName}</Radio>
+                              </Radio.Group>
+                            </Form.Item>
+                          </Col>
+                        </Row>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </Form.List>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };

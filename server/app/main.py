@@ -10,6 +10,7 @@ from .api.endpoints import (
     match_results,
     match_types,
     statistics,
+    win_rates,
 )
 from .core.config import config
 from .db.mongodb import db
@@ -51,3 +52,4 @@ app.include_router(
     match_results.router, prefix="/api/v1/match-results", tags=["match-results"]
 )
 app.include_router(statistics.router, prefix="/api/v1", tags=["statistics"])
+app.include_router(win_rates.router, prefix="/api/v1/win-rates", tags=["win-rates"])

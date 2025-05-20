@@ -18,6 +18,7 @@ passlib = "^1.7.4"
 python-multipart = "^0.0.20"
 pyyaml = "^6.0.2"
 motor = "^3.7.0"
+numpy = "^1.26.4"
 
 
 [build-system]

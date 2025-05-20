@@ -8,6 +8,7 @@ import {
   BarChartOutlined,
   LineChartOutlined,
   PieChartOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
 
 const { Header, Content, Sider } = Layout;
@@ -49,6 +50,11 @@ const Dashboard: React.FC = () => {
       key: "deck-matchups",
       icon: <PieChartOutlined />,
       label: "卡组对战",
+    },
+    {
+      key: "win-rate-table",
+      icon: <TableOutlined />,
+      label: "梯度表（开发中）",
     },
   ];
 

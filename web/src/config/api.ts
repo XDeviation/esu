@@ -15,7 +15,10 @@ export const API_ENDPOINTS = {
 // 创建 axios 实例
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 5000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // 请求拦截器
