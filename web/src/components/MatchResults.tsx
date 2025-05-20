@@ -12,8 +12,6 @@ import {
   Row,
   Col,
   Radio,
-  Input,
-  Spin,
 } from "antd";
 import { PlusOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import api, { API_ENDPOINTS } from "../config/api";
@@ -58,7 +56,6 @@ const MatchResults: React.FC = () => {
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [loading, setLoading] = useState(false);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
-  const [editingMatch, setEditingMatch] = useState<MatchResult | null>(null);
   const [form] = Form.useForm();
   const [batchForm] = Form.useForm();
   const location = useLocation();

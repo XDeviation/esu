@@ -18,7 +18,7 @@ import {
 import { PlusOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import api from "../config/api";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const { Title } = Typography;
 
@@ -84,7 +84,6 @@ const DeckMatchups: React.FC = () => {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const fetchEnvironments = useCallback(async () => {
     try {

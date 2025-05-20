@@ -78,7 +78,7 @@ const WinRateTable: React.FC = () => {
       dataIndex: "deck_name",
       key: "deck_name",
       width: 200,
-      render: (text: string, record: TableRecord) => decks[record.deck_id]?.name || '未知卡组',
+      render: (_: string, record: TableRecord) => decks[record.deck_id]?.name || '未知卡组',
     },
     {
       title: "平均胜率",
