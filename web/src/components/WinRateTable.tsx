@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api, { API_BASE_URL } from '../config/api';
 import { Card, Table, Typography, Spin, Input, Button, Row, Col, Space } from 'antd';
 
@@ -40,7 +40,7 @@ const WinRateTable: React.FC = () => {
     }
   };
 
-  const fetchWinRates = async () => {
+  const fetchWinRates = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.post<WinRateCalculationResponse>(`${API_BASE_URL}/api/v1/win-rates/calculate`, {
@@ -53,12 +53,18 @@ const WinRateTable: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sensitivity]);
 
   useEffect(() => {
     fetchDecks();
     fetchWinRates();
-  }, [sensitivity]);
+  }, [sensitivity, fetchWinRates]);
+
+  interface TableRecord {
+    deck_id: number;
+    average_win_rate: number;
+    weighted_win_rate: number;
+  }
 
   const columns = [
     {
@@ -72,14 +78,14 @@ const WinRateTable: React.FC = () => {
       dataIndex: "deck_name",
       key: "deck_name",
       width: 200,
-      render: (text: string, record: any) => decks[record.deck_id]?.name || '未知卡组',
+      render: (text: string, record: TableRecord) => decks[record.deck_id]?.name || '未知卡组',
     },
     {
       title: "平均胜率",
       dataIndex: "average_win_rate",
       key: "average_win_rate",
       width: 120,
-      sorter: (a: any, b: any) => a.average_win_rate - b.average_win_rate,
+      sorter: (a: TableRecord, b: TableRecord) => a.average_win_rate - b.average_win_rate,
       render: (value: number) => `${(value * 100).toFixed(2)}%`,
     },
     {
@@ -87,7 +93,7 @@ const WinRateTable: React.FC = () => {
       dataIndex: "weighted_win_rate",
       key: "weighted_win_rate",
       width: 120,
-      sorter: (a: any, b: any) => a.weighted_win_rate - b.weighted_win_rate,
+      sorter: (a: TableRecord, b: TableRecord) => a.weighted_win_rate - b.weighted_win_rate,
       render: (value: number) => `${(value * 100).toFixed(2)}%`,
     },
   ];
