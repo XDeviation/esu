@@ -154,11 +154,16 @@ const MatchResults: React.FC = () => {
           match.win === "first" ? first_deck_id : second_deck_id;
         const losing_deck_id =
           match.win === "first" ? second_deck_id : first_deck_id;
+        
+        // 根据first_player决定先手和后手卡组
+        const actual_first_deck_id = match.first_player === "first" ? first_deck_id : second_deck_id;
+        const actual_second_deck_id = match.first_player === "first" ? second_deck_id : first_deck_id;
+        
         return {
           environment_id,
           match_type_id,
-          first_deck_id,
-          second_deck_id,
+          first_deck_id: actual_first_deck_id,
+          second_deck_id: actual_second_deck_id,
           winning_deck_id,
           losing_deck_id,
         };
