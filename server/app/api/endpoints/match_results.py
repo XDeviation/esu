@@ -46,12 +46,13 @@ async def create_batch_match_results(
     first_deck_id = batch_match_result.match_results[0].first_deck_id
     second_deck_id = batch_match_result.match_results[0].second_deck_id
 
-    if not await db.decks.find_one({"id": first_deck_id}):
+    # 如果卡组ID为0，说明是忽略先后手的情况
+    if first_deck_id != 0 and not await db.decks.find_one({"id": first_deck_id}):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"卡组 {first_deck_id} 不存在",
         )
-    if not await db.decks.find_one({"id": second_deck_id}):
+    if second_deck_id != 0 and not await db.decks.find_one({"id": second_deck_id}):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"卡组 {second_deck_id} 不存在",
@@ -60,17 +61,19 @@ async def create_batch_match_results(
     # 创建对局结果列表
     created_match_results = []
     for match_result in batch_match_result.match_results:
-        # 验证胜利和失败卡组
-        if match_result.winning_deck_id not in [first_deck_id, second_deck_id]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="胜利卡组必须是先手或后手卡组之一",
-            )
-        if match_result.losing_deck_id not in [first_deck_id, second_deck_id]:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="失败卡组必须是先手或后手卡组之一",
-            )
+        # 如果是忽略先后手的情况（卡组ID为0），跳过胜利和失败卡组的验证
+        if first_deck_id != 0 and second_deck_id != 0:
+            # 验证胜利和失败卡组
+            if match_result.winning_deck_id not in [first_deck_id, second_deck_id]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="胜利卡组必须是先手或后手卡组之一",
+                )
+            if match_result.losing_deck_id not in [first_deck_id, second_deck_id]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="失败卡组必须是先手或后手卡组之一",
+                )
 
         # 获取新的 ID
         match_result_id = await get_next_id()

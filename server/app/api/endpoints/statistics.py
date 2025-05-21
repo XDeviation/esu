@@ -39,7 +39,7 @@ async def get_environment_statistics(
             deck_matches = [
                 m
                 for m in match_results
-                if m["first_deck_id"] == deck_id or m["second_deck_id"] == deck_id
+                if m["winning_deck_id"] == deck_id or m["losing_deck_id"] == deck_id
             ]
 
             wins = sum(
@@ -107,21 +107,27 @@ async def get_deck_matchups(environment_id: int, current_user: dict = get_curren
             deck_matches = [
                 m
                 for m in match_results
-                if m["first_deck_id"] == deck_id or m["second_deck_id"] == deck_id
+                if m["winning_deck_id"] == deck_id or m["losing_deck_id"] == deck_id
             ]
             # 统计对阵其他卡组的战绩
             opponent_stats = {}
             for match in deck_matches:
+                # 确定对手ID
+                if match["winning_deck_id"] == deck_id:
+                    opponent_id = str(match["losing_deck_id"])
+                else:
+                    opponent_id = str(match["winning_deck_id"])
+                
+                # 确定是否先手（处理三种情况）
                 first_deck_id = match["first_deck_id"]
                 second_deck_id = match["second_deck_id"]
-                if first_deck_id == second_deck_id:
-                    continue
-                if first_deck_id == deck_id:
-                    opponent_id = str(second_deck_id)
-                    is_first_hand = True
+                
+                # 如果first_deck_id和second_deck_id都为0，说明没有先后手信息
+                if first_deck_id == 0 and second_deck_id == 0:
+                    is_first_hand = None
                 else:
-                    opponent_id = str(first_deck_id)
-                    is_first_hand = False
+                    is_first_hand = first_deck_id == deck_id
+
                 if opponent_id in deck_map:
                     if opponent_id not in opponent_stats:
                         opponent_stats[opponent_id] = {
@@ -138,17 +144,23 @@ async def get_deck_matchups(environment_id: int, current_user: dict = get_curren
 
                     stats = opponent_stats[opponent_id]
                     stats["total"] += 1
-                    if is_first_hand:
+                    
+                    # 统计先后手数据
+                    if is_first_hand is None:
+                        # 没有先后手信息，不统计先后手数据
+                        pass
+                    elif is_first_hand:
                         stats["first_hand_total"] += 1
                     else:
                         stats["second_hand_total"] += 1
 
                     if match["winning_deck_id"] == deck_id:
                         stats["wins"] += 1
-                        if is_first_hand:
-                            stats["first_hand_wins"] += 1
-                        else:
-                            stats["second_hand_wins"] += 1
+                        if is_first_hand is not None:  # 只有在有先后手信息时才统计
+                            if is_first_hand:
+                                stats["first_hand_wins"] += 1
+                            else:
+                                stats["second_hand_wins"] += 1
                     elif match["losing_deck_id"] == deck_id:
                         stats["losses"] += 1
 

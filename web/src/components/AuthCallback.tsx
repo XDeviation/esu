@@ -21,7 +21,7 @@ const AuthCallback: React.FC = () => {
         localStorage.setItem('token', response.data.access_token);
         message.success('登录成功！');
         navigate('/dashboard');
-      } catch (error) {
+      } catch {
         message.error('登录失败！');
         navigate('/login');
       }

@@ -46,6 +46,7 @@ const Decks: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<number | null>(null);
   const [form] = Form.useForm();
   const location = useLocation();
 
@@ -222,13 +223,27 @@ const Decks: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          创建卡组
-        </Button>
+        <Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            创建卡组
+          </Button>
+          <Select
+            style={{ width: 200 }}
+            placeholder="选择环境"
+            allowClear
+            onChange={(value) => setSelectedEnvironment(value)}
+          >
+            {environments.map((env) => (
+              <Select.Option key={env.id} value={env.id}>
+                {env.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Space>
       </div>
       <Table
         columns={columns}
-        dataSource={decks}
+        dataSource={decks.filter(deck => !selectedEnvironment || deck.environment_id === selectedEnvironment)}
         rowKey="id"
         loading={loading}
       />
