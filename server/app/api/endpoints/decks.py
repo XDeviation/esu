@@ -99,8 +99,15 @@ async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_adm
     if not deck:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
 
-    # 检查是否有对局使用此卡组
-    if await db.match_results.find_one(
+    # 检查权限
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="只有管理员才能执行此操作"
+        )
+
+    # 删除所有相关的对局记录
+    await db.match_results.delete_many(
         {
             "$or": [
                 {"first_deck_id": deck_id},
@@ -109,12 +116,8 @@ async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_adm
                 {"losing_deck_id": deck_id},
             ]
         }
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="无法删除已在对局中使用的卡组",
-        )
+    )
 
     # 删除卡组
     await db.decks.delete_one({"id": deck_id})
-    return {"message": "卡组已删除"}
+    return {"message": "卡组及相关对局记录已删除"}

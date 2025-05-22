@@ -22,6 +22,7 @@ interface BatchMatchModalProps {
     second_deck_id?: number;
     environment_id?: number;
     match_type_id?: number;
+    ignore_first_player?: boolean;
   };
 }
 
@@ -35,7 +36,6 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
   initialValues,
 }) => {
   const [form] = Form.useForm();
-  const [ignoreFirstPlayer, setIgnoreFirstPlayer] = React.useState(false);
   const [selectedEnvironment, setSelectedEnvironment] = React.useState<number | undefined>();
 
   // 当visible或initialValues变化时，更新表单值
@@ -105,7 +105,7 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
     <Modal
       title="添加战绩"
       open={visible}
-      onOk={handleSubmit}
+      onOk={() => form.submit()}
       onCancel={() => {
         form.resetFields();
         setSelectedEnvironment(undefined);
@@ -186,7 +186,7 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
         </Row>
 
         <Form.Item name="ignore_first_player" valuePropName="checked">
-          <Checkbox onChange={(e) => setIgnoreFirstPlayer(e.target.checked)}>
+          <Checkbox>
             忽略先后手
           </Checkbox>
         </Form.Item>
@@ -210,58 +210,88 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
           </div>
           <Form.List name="matches">
             {(fields, { remove }) => (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "16px",
-                }}
+              <Form.Item
+                noStyle
+                dependencies={['ignore_first_player']}
               >
-                {fields.map((field, index) => {
-                  const firstDeckId = form.getFieldValue("first_deck_id");
-                  const secondDeckId = form.getFieldValue("second_deck_id");
-                  const firstDeck = decks.find((d) => d.id === firstDeckId);
-                  const secondDeck = decks.find((d) => d.id === secondDeckId);
-                  const firstDeckName = firstDeck
-                    ? `${firstDeck.name} (${firstDeck.author_id})`
-                    : "卡组1";
-                  const secondDeckName = secondDeck
-                    ? `${secondDeck.name} (${secondDeck.author_id})`
-                    : "卡组2";
+                {() => (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "16px",
+                    }}
+                  >
+                    {fields.map((field, index) => {
+                      const firstDeckId = form.getFieldValue("first_deck_id");
+                      const secondDeckId = form.getFieldValue("second_deck_id");
+                      const firstDeck = decks.find((d) => d.id === firstDeckId);
+                      const secondDeck = decks.find((d) => d.id === secondDeckId);
+                      const firstDeckName = firstDeck
+                        ? `${firstDeck.name} (${firstDeck.author_id})`
+                        : "卡组1";
+                      const secondDeckName = secondDeck
+                        ? `${secondDeck.name} (${secondDeck.author_id})`
+                        : "卡组2";
+                      const ignoreFirstPlayer = form.getFieldValue("ignore_first_player");
 
-                  return (
-                    <Card
-                      key={`match-${field.key}`}
-                      title={`对战 ${index + 1}`}
-                      extra={
-                        fields.length > 1 && (
-                          <Button
-                            type="link"
-                            danger
-                            onClick={() => remove(field.name)}
-                          >
-                            删除
-                          </Button>
-                        )
-                      }
-                    >
-                      <Row gutter={16} align="middle">
-                        {!ignoreFirstPlayer && (
-                          <>
-                            <Col span={6}>
+                      return (
+                        <Card
+                          key={`match-${field.key}`}
+                          title={`对战 ${index + 1}`}
+                          extra={
+                            fields.length > 1 && (
+                              <Button
+                                type="link"
+                                danger
+                                onClick={() => remove(field.name)}
+                              >
+                                删除
+                              </Button>
+                            )
+                          }
+                        >
+                          <Row gutter={16} align="middle">
+                            {!ignoreFirstPlayer && (
+                              <>
+                                <Col span={6}>
+                                  <div
+                                    style={{
+                                      textAlign: "center",
+                                      fontWeight: "bold",
+                                    }}
+                                  >
+                                    先手
+                                  </div>
+                                </Col>
+                                <Col span={6}>
+                                  <Form.Item
+                                    key={`first-${field.key}`}
+                                    name={[field.name, "first_player"]}
+                                    noStyle
+                                  >
+                                    <Radio.Group>
+                                      <Radio value="first">{firstDeckName}</Radio>
+                                      <Radio value="second">{secondDeckName}</Radio>
+                                    </Radio.Group>
+                                  </Form.Item>
+                                </Col>
+                              </>
+                            )}
+                            <Col span={ignoreFirstPlayer ? 12 : 6}>
                               <div
                                 style={{
                                   textAlign: "center",
                                   fontWeight: "bold",
                                 }}
                               >
-                                先手
+                                胜利
                               </div>
                             </Col>
-                            <Col span={6}>
+                            <Col span={ignoreFirstPlayer ? 12 : 6}>
                               <Form.Item
-                                key={`first-${field.key}`}
-                                name={[field.name, "first_player"]}
+                                key={`win-${field.key}`}
+                                name={[field.name, "win"]}
                                 noStyle
                               >
                                 <Radio.Group>
@@ -270,35 +300,13 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
                                 </Radio.Group>
                               </Form.Item>
                             </Col>
-                          </>
-                        )}
-                        <Col span={ignoreFirstPlayer ? 12 : 6}>
-                          <div
-                            style={{
-                              textAlign: "center",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            胜利
-                          </div>
-                        </Col>
-                        <Col span={ignoreFirstPlayer ? 12 : 6}>
-                          <Form.Item
-                            key={`win-${field.key}`}
-                            name={[field.name, "win"]}
-                            noStyle
-                          >
-                            <Radio.Group>
-                              <Radio value="first">{firstDeckName}</Radio>
-                              <Radio value="second">{secondDeckName}</Radio>
-                            </Radio.Group>
-                          </Form.Item>
-                        </Col>
-                      </Row>
-                    </Card>
-                  );
-                })}
-              </div>
+                          </Row>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </Form.Item>
             )}
           </Form.List>
         </div>

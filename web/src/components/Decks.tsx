@@ -207,9 +207,11 @@ const Decks: React.FC = () => {
           </Button>
           <Popconfirm
             title="确定要删除这个卡组吗？"
+            description="此操作将同时删除所有与该卡组相关的对局记录，且不可恢复。"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
+            okButtonProps={{ danger: true }}
           >
             <Button type="link" danger icon={<DeleteOutlined />}>
               删除

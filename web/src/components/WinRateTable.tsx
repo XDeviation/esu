@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api, { API_BASE_URL } from '../config/api';
-import { Card, Table, Typography, Spin, Input, Button, Row, Col, Space } from 'antd';
+import { Card, Table, Typography, Spin, Button, Row, Col, Space, Select } from 'antd';
+
 
 const { Title } = Typography;
+
+interface Environment {
+  id: number;
+  name: string;
+}
 
 interface Deck {
   id: number;
   name: string;
+  environment_id: number;
 }
 
 interface WinRateCalculation {
@@ -24,8 +31,24 @@ interface WinRateCalculationResponse {
 const WinRateTable: React.FC = () => {
   const [calculations, setCalculations] = useState<Record<number, WinRateCalculation>>({});
   const [decks, setDecks] = useState<Record<number, Deck>>({});
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<number | undefined>();
   const [sensitivity, setSensitivity] = useState<number>(30.0);
   const [loading, setLoading] = useState<boolean>(false);
+
+  const fetchEnvironments = async () => {
+    try {
+      const response = await api.get<Environment[]>(`${API_BASE_URL}/api/v1/environments`);
+      setEnvironments(response.data);
+      // 默认选择最新的环境
+      if (response.data.length > 0) {
+        const latestEnv = response.data[response.data.length - 1];
+        setSelectedEnvironment(latestEnv.id);
+      }
+    } catch (error) {
+      console.error('Error fetching environments:', error);
+    }
+  };
 
   const fetchDecks = async () => {
     try {
@@ -56,6 +79,7 @@ const WinRateTable: React.FC = () => {
   }, [sensitivity]);
 
   useEffect(() => {
+    fetchEnvironments();
     fetchDecks();
     fetchWinRates();
   }, [sensitivity, fetchWinRates]);
@@ -98,12 +122,34 @@ const WinRateTable: React.FC = () => {
     },
   ];
 
-  const dataSource = Object.entries(calculations).map(([deckId, calc]) => ({
-    key: deckId,
-    deck_id: Number(deckId),
-    average_win_rate: calc.average_win_rate,
-    weighted_win_rate: calc.weighted_win_rate,
-  }));
+  const dataSource = Object.entries(calculations)
+    .filter(([deckId]) => {
+      const deck = decks[Number(deckId)];
+      return !selectedEnvironment || deck?.environment_id === selectedEnvironment;
+    })
+    .map(([deckId, calc]) => ({
+      key: deckId,
+      deck_id: Number(deckId),
+      average_win_rate: calc.average_win_rate,
+      weighted_win_rate: calc.weighted_win_rate,
+    }))
+    .sort((a, b) => b.weighted_win_rate - a.weighted_win_rate);
+
+  const handleEvolutionPhaseChange = (value: string) => {
+    switch (value) {
+      case 'early':
+        setSensitivity(20.0);
+        break;
+      case 'mid':
+        setSensitivity(30.0);
+        break;
+      case 'late':
+        setSensitivity(40.0);
+        break;
+      default:
+        setSensitivity(30.0);
+    }
+  };
 
   return (
     <div className="p-6">
@@ -115,16 +161,29 @@ const WinRateTable: React.FC = () => {
                 梯度表
               </Title>
               <Space>
-                <Input
-                  type="number"
-                  value={sensitivity}
-                  onChange={(e) => setSensitivity(Number(e.target.value))}
-                  min={1}
-                  max={100}
-                  step={1}
-                  addonBefore="环境功利指数"
+                <Select
                   style={{ width: 200 }}
-                />
+                  placeholder="选择环境"
+                  allowClear
+                  value={selectedEnvironment}
+                  onChange={(value) => setSelectedEnvironment(value)}
+                >
+                  {environments.map((env) => (
+                    <Select.Option key={env.id} value={env.id}>
+                      {env.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Select
+                  style={{ width: 200 }}
+                  placeholder="环境演化进度"
+                  defaultValue="mid"
+                  onChange={handleEvolutionPhaseChange}
+                >
+                  <Select.Option value="early">前期</Select.Option>
+                  <Select.Option value="mid">中期</Select.Option>
+                  <Select.Option value="late">末期</Select.Option>
+                </Select>
                 <Button type="primary" onClick={fetchWinRates} loading={loading}>
                   {loading ? '加载中...' : '刷新'}
                 </Button>
