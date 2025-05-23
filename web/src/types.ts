@@ -13,6 +13,7 @@ export interface Deck {
 export interface MatchType {
   id: number;
   name: string;
+  require_permission: boolean;
 }
 
 export interface MatchResult {
@@ -46,4 +47,10 @@ export interface DeckStatistics {
 export interface BatchMatch {
   first_player: "first" | "second";
   win: "first" | "second";
+}
+
+export enum UserRole {
+  ADMIN = "admin",
+  MODERATOR = "moderator",
+  PLAYER = "player"
 } 

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import api, { API_BASE_URL } from '../config/api';
 import { Card, Table, Typography, Spin, Button, Row, Col, Space, Select } from 'antd';
+import debounce from 'lodash/debounce';
 
-
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 interface Environment {
   id: number;
@@ -35,6 +35,19 @@ const WinRateTable: React.FC = () => {
   const [selectedEnvironment, setSelectedEnvironment] = useState<number | undefined>();
   const [sensitivity, setSensitivity] = useState<number>(30.0);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // 使用 Map 优化查找操作
+  const decksMap = useMemo(() => {
+    return new Map(Object.entries(decks).map(([id, deck]) => [Number(id), deck]));
+  }, [decks]);
+
+  // 防抖处理环境选择
+  const debouncedSetSelectedEnvironment = useCallback(
+    debounce((value: number | undefined) => {
+      setSelectedEnvironment(value);
+    }, 300),
+    []
+  );
 
   const fetchEnvironments = async () => {
     try {
@@ -90,7 +103,7 @@ const WinRateTable: React.FC = () => {
     weighted_win_rate: number;
   }
 
-  const columns = [
+  const columns = useMemo(() => [
     {
       title: "卡组ID",
       dataIndex: "deck_id",
@@ -102,7 +115,7 @@ const WinRateTable: React.FC = () => {
       dataIndex: "deck_name",
       key: "deck_name",
       width: 200,
-      render: (_: string, record: TableRecord) => decks[record.deck_id]?.name || '未知卡组',
+      render: (_: string, record: TableRecord) => decksMap.get(record.deck_id)?.name || '未知卡组',
     },
     {
       title: "平均胜率",
@@ -120,36 +133,38 @@ const WinRateTable: React.FC = () => {
       sorter: (a: TableRecord, b: TableRecord) => a.weighted_win_rate - b.weighted_win_rate,
       render: (value: number) => `${(value * 100).toFixed(2)}%`,
     },
-  ];
+  ], [decksMap]);
 
-  const dataSource = Object.entries(calculations)
-    .filter(([deckId]) => {
-      const deck = decks[Number(deckId)];
-      return !selectedEnvironment || deck?.environment_id === selectedEnvironment;
-    })
-    .map(([deckId, calc]) => ({
-      key: deckId,
-      deck_id: Number(deckId),
-      average_win_rate: calc.average_win_rate,
-      weighted_win_rate: calc.weighted_win_rate,
-    }))
-    .sort((a, b) => b.weighted_win_rate - a.weighted_win_rate);
+  const dataSource = useMemo(() => {
+    return Object.entries(calculations)
+      .filter(([deckId]) => {
+        const deck = decksMap.get(Number(deckId));
+        return !selectedEnvironment || deck?.environment_id === selectedEnvironment;
+      })
+      .map(([deckId, calc]) => ({
+        key: deckId,
+        deck_id: Number(deckId),
+        average_win_rate: calc.average_win_rate,
+        weighted_win_rate: calc.weighted_win_rate,
+      }))
+      .sort((a, b) => b.weighted_win_rate - a.weighted_win_rate);
+  }, [calculations, decksMap, selectedEnvironment]);
 
-  const handleEvolutionPhaseChange = (value: string) => {
+  const handleEvolutionPhaseChange = useCallback((value: string) => {
     switch (value) {
       case 'early':
-        setSensitivity(20.0);
+        setSensitivity(15.0);
         break;
       case 'mid':
         setSensitivity(30.0);
         break;
       case 'late':
-        setSensitivity(40.0);
+        setSensitivity(45.0);
         break;
       default:
-        setSensitivity(30.0);
+        setSensitivity(15.0);
     }
-  };
+  }, []);
 
   return (
     <div className="p-6">
@@ -166,7 +181,7 @@ const WinRateTable: React.FC = () => {
                   placeholder="选择环境"
                   allowClear
                   value={selectedEnvironment}
-                  onChange={(value) => setSelectedEnvironment(value)}
+                  onChange={debouncedSetSelectedEnvironment}
                 >
                   {environments.map((env) => (
                     <Select.Option key={env.id} value={env.id}>
@@ -177,7 +192,7 @@ const WinRateTable: React.FC = () => {
                 <Select
                   style={{ width: 200 }}
                   placeholder="环境演化进度"
-                  defaultValue="mid"
+                  defaultValue="early"
                   onChange={handleEvolutionPhaseChange}
                 >
                   <Select.Option value="early">前期</Select.Option>
@@ -193,15 +208,20 @@ const WinRateTable: React.FC = () => {
         </Row>
       </Card>
 
+      <Card style={{ marginBottom: 16, backgroundColor: '#fffbe6' }}>
+        <Text type="warning">
+          提示：梯度表数据仅供参考，实际对局结果可能因玩家水平、卡组构筑等因素而有所不同。
+        </Text>
+      </Card>
+
       <Card>
-        <Spin spinning={loading}>
-          <Table
-            dataSource={dataSource}
-            columns={columns}
-            pagination={false}
-            scroll={{ x: "max-content" }}
-          />
-        </Spin>
+        <Table
+          columns={columns}
+          dataSource={dataSource}
+          loading={loading}
+          pagination={false}
+          rowKey="deck_id"
+        />
       </Card>
     </div>
   );

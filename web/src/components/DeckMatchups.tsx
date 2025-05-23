@@ -16,6 +16,8 @@ import api from "../config/api";
 import { useLocation } from "react-router-dom";
 import BatchMatchModal from './BatchMatchModal';
 import { handleBatchSubmit as submitBatchMatch } from '../utils/matchResults';
+import { MatchType, UserRole } from '../types';
+import { InfoCircleOutlined } from '@ant-design/icons';
 
 const { Title } = Typography;
 
@@ -29,11 +31,6 @@ interface Deck {
   name: string;
   author_id: string;
   environment_id: number;
-}
-
-interface MatchType {
-  id: number;
-  name: string;
 }
 
 interface MatchupStats {
@@ -74,6 +71,7 @@ const DeckMatchups: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<string>("all");
+  const [selectedMatchType, setSelectedMatchType] = useState<string>("");
   const [statistics, setStatistics] = useState<MatchupStatistics | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
@@ -86,7 +84,17 @@ const DeckMatchups: React.FC = () => {
   }>({});
   const [decks, setDecks] = useState<Deck[]>([]);
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
+  const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
   const location = useLocation();
+
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.USERS_ME);
+      setUserRole(response.data.role);
+    } catch (error) {
+      console.error("获取用户信息失败:", error);
+    }
+  }, []);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -119,19 +127,36 @@ const DeckMatchups: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
       setMatchTypes(response.data);
+      // 设置默认的对局类型
+      if (response.data.length > 0) {
+        // 如果是普通玩家，选择第一个不需要权限的比赛类型
+        if (userRole === UserRole.PLAYER) {
+          const firstAvailableType = response.data.find((type: MatchType) => !type.require_permission);
+          if (firstAvailableType) {
+            setSelectedMatchType(firstAvailableType.id.toString());
+          }
+        } else {
+          // 对于管理员和版主，选择第一个比赛类型
+          setSelectedMatchType(response.data[0].id.toString());
+        }
+      }
     } catch (error) {
       console.error("获取比赛类型列表失败:", error);
       message.error("获取比赛类型列表失败");
     }
-  }, []);
+  }, [userRole]);
 
   useEffect(() => {
     if (location.pathname === "/deck-matchups") {
       fetchEnvironments();
       fetchDecks();
-      fetchMatchTypes();
+      fetchUserInfo();
     }
-  }, [location.pathname, fetchEnvironments, fetchDecks, fetchMatchTypes]);
+  }, [location.pathname, fetchEnvironments, fetchDecks, fetchUserInfo]);
+
+  useEffect(() => {
+    fetchMatchTypes();
+  }, [fetchMatchTypes]);
 
   useEffect(() => {
     const fetchMatchups = async () => {
@@ -141,7 +166,7 @@ const DeckMatchups: React.FC = () => {
       setError("");
       try {
         const response = await api.get(
-          `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/deck-matchups`
+          `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/deck-matchups${selectedMatchType ? `?match_type_id=${selectedMatchType}` : ''}`
         );
         setStatistics(response.data);
       } catch (err) {
@@ -153,7 +178,7 @@ const DeckMatchups: React.FC = () => {
     };
 
     fetchMatchups();
-  }, [selectedEnvironment]);
+  }, [selectedEnvironment, selectedMatchType]);
 
   const handleCellClick = (deckId: string, opponentId: string) => {
     if (!statistics) return;
@@ -188,7 +213,7 @@ const DeckMatchups: React.FC = () => {
       setBatchModalVisible(false);
       // 刷新对战数据
       const response = await api.get(
-        `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/deck-matchups`
+        `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/deck-matchups${selectedMatchType ? `?match_type_id=${selectedMatchType}` : ''}`
       );
       setStatistics(response.data);
     }
@@ -332,13 +357,21 @@ const DeckMatchups: React.FC = () => {
 
   return (
     <div className="p-6">
+      <Card style={{ marginBottom: 16, backgroundColor: '#e6f7ff' }}>
+        <Typography.Text type="secondary">
+          <InfoCircleOutlined style={{ marginRight: 8 }} />
+          提示：单击表格快速提交战绩
+        </Typography.Text>
+      </Card>
       <Card className="mb-6">
         <Row justify="center">
           <Col>
             <Space size="large" align="center">
-              <Title level={2} style={{ margin: 0 }}>
-                卡组对战统计
-              </Title>
+              <Space>
+                <Title level={2} style={{ margin: 0 }}>
+                  战绩总表统计
+                </Title>
+              </Space>
               <Select
                 value={selectedEnvironment}
                 onChange={(value) => setSelectedEnvironment(value)}
@@ -351,6 +384,22 @@ const DeckMatchups: React.FC = () => {
                     {env.name}
                   </Select.Option>
                 ))}
+              </Select>
+              <Select
+                value={selectedMatchType}
+                onChange={(value) => setSelectedMatchType(value)}
+                style={{ width: 200 }}
+                loading={loading}
+                placeholder="请选择比赛类型"
+                allowClear={userRole !== UserRole.PLAYER}
+              >
+                {matchTypes
+                  .filter((type: MatchType) => userRole !== UserRole.PLAYER || !type.require_permission)
+                  .map((type) => (
+                    <Select.Option key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </Select.Option>
+                  ))}
               </Select>
               <Select
                 value={selectedHand}

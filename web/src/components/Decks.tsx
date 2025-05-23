@@ -12,10 +12,11 @@ import {
   Card,
   Typography,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
+import { UserRole } from "../types";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -49,6 +50,7 @@ const Decks: React.FC = () => {
   const [selectedEnvironment, setSelectedEnvironment] = useState<number | null>(null);
   const [form] = Form.useForm();
   const location = useLocation();
+  const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
 
   const fetchDecks = useCallback(async () => {
     try {
@@ -73,21 +75,39 @@ const Decks: React.FC = () => {
     }
   }, []);
 
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.USERS_ME);
+      setUserRole(response.data.role);
+    } catch (error) {
+      console.error("获取用户信息失败:", error);
+    }
+  }, []);
+
   // 监听路由变化
   useEffect(() => {
     if (location.pathname === "/decks") {
       fetchDecks();
       fetchEnvironments();
+      fetchUserInfo();
     }
-  }, [location.pathname, fetchDecks, fetchEnvironments]);
+  }, [location.pathname, fetchDecks, fetchEnvironments, fetchUserInfo]);
 
   const handleCreate = () => {
+    if (userRole === UserRole.PLAYER) {
+      message.error("权限不足，请联系管理员");
+      return;
+    }
     setEditingDeck(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record: Deck) => {
+    if (userRole === UserRole.PLAYER) {
+      message.error("权限不足，请联系管理员");
+      return;
+    }
     setEditingDeck(record);
     form.setFieldsValue({
       ...record,
@@ -111,6 +131,11 @@ const Decks: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      if (userRole === UserRole.PLAYER) {
+        message.error("权限不足，请联系管理员");
+        return;
+      }
+
       const values = await form.validateFields();
       console.log("表单值:", values);
 
@@ -196,6 +221,7 @@ const Decks: React.FC = () => {
       title: "操作",
       key: "action",
       width: 200,
+      hidden: userRole === UserRole.PLAYER,
       render: (_: unknown, record: Deck) => (
         <Space>
           <Button
@@ -207,7 +233,7 @@ const Decks: React.FC = () => {
           </Button>
           <Popconfirm
             title="确定要删除这个卡组吗？"
-            description="此操作将同时删除所有与该卡组相关的对局记录，且不可恢复。"
+            description="此操作将同时删除所有与该卡组相关的战绩记录，且不可恢复。"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
@@ -220,15 +246,25 @@ const Decks: React.FC = () => {
         </Space>
       ),
     },
-  ];
+  ].filter(column => !column.hidden);
 
   return (
     <div>
+      {userRole === UserRole.PLAYER && (
+        <Card style={{ marginBottom: 16, backgroundColor: '#fffbe6' }}>
+          <Typography.Text type="warning">
+            <InfoCircleOutlined style={{ marginRight: 8 }} />
+            提示：只有管理员和版主可以创建和编辑卡组。如需创建卡组，请联系管理员。
+          </Typography.Text>
+        </Card>
+      )}
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            创建卡组
-          </Button>
+          {userRole !== UserRole.PLAYER && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              创建卡组
+            </Button>
+          )}
           <Select
             style={{ width: 200 }}
             placeholder="选择环境"

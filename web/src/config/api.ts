@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   DECKS: `${API_BASE_URL}/api/v1/decks/`,
   MATCH_TYPES: `${API_BASE_URL}/api/v1/match-types/`,
   MATCH_RESULTS: `${API_BASE_URL}/api/v1/match-results/`,
+  USERS_ME: `${API_BASE_URL}/api/v1/users/me/`,
 } as const;
 
 // 创建 axios 实例

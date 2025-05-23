@@ -24,7 +24,7 @@ const Dashboard: React.FC = () => {
     {
       key: "environments",
       icon: <EnvironmentOutlined />,
-      label: "环境管理",
+      label: "卡包环境",
     },
     {
       key: "decks",
@@ -34,12 +34,12 @@ const Dashboard: React.FC = () => {
     {
       key: "match-types",
       icon: <TagsOutlined />,
-      label: "对局类型",
+      label: "地区环境",
     },
     {
       key: "match-results",
       icon: <BarChartOutlined />,
-      label: "对局记录",
+      label: "战绩查询",
     },
     {
       key: "statistics",
@@ -49,12 +49,12 @@ const Dashboard: React.FC = () => {
     {
       key: "deck-matchups",
       icon: <PieChartOutlined />,
-      label: "卡组对战",
+      label: "战绩总表",
     },
     {
       key: "win-rate-table",
       icon: <TableOutlined />,
-      label: "梯度表（开发中）",
+      label: "梯度表",
     },
   ];
 

@@ -120,4 +120,4 @@ async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_adm
 
     # 删除卡组
     await db.decks.delete_one({"id": deck_id})
-    return {"message": "卡组及相关对局记录已删除"}
+    return {"message": "卡组及相关战绩记录已删除"}
