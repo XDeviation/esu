@@ -14,7 +14,6 @@ import {
 } from "antd";
 import api from "../config/api";
 import { useLocation } from "react-router-dom";
-import { UserRole, MatchType } from "../types";
 
 const { Title } = Typography;
 
@@ -42,25 +41,13 @@ type SortType = "total_matches_desc" | "win_rate_desc";
 
 const Statistics: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
-  const [selectedMatchType, setSelectedMatchType] = useState<string>("");
   const [statistics, setStatistics] = useState<EnvironmentStatistics | null>(
     null
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [sortType, setSortType] = useState<SortType>("total_matches_desc");
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
   const location = useLocation();
-
-  const fetchUserInfo = useCallback(async () => {
-    try {
-      const response = await api.get(API_ENDPOINTS.USERS_ME);
-      setUserRole(response.data.role);
-    } catch (error) {
-      console.error("获取用户信息失败:", error);
-    }
-  }, []);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -79,38 +66,11 @@ const Statistics: React.FC = () => {
     }
   }, []);
 
-  const fetchMatchTypes = useCallback(async () => {
-    try {
-      const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
-      setMatchTypes(response.data);
-      // 设置默认的对局类型
-      if (response.data.length > 0) {
-        // 如果是普通玩家，选择第一个不需要权限的比赛类型
-        if (userRole === UserRole.PLAYER) {
-          const firstAvailableType = response.data.find((type: MatchType) => !type.require_permission);
-          if (firstAvailableType) {
-            setSelectedMatchType(firstAvailableType.id.toString());
-          }
-        } else {
-          // 对于管理员和版主，选择第一个比赛类型
-          setSelectedMatchType(response.data[0].id.toString());
-        }
-      }
-    } catch (error) {
-      message.error("获取比赛类型失败");
-    }
-  }, [userRole]);
-
   useEffect(() => {
     if (location.pathname === "/statistics") {
       fetchEnvironments();
-      fetchUserInfo();
     }
-  }, [location.pathname, fetchEnvironments, fetchUserInfo]);
-
-  useEffect(() => {
-    fetchMatchTypes();
-  }, [fetchMatchTypes]);
+  }, [location.pathname, fetchEnvironments]);
 
   useEffect(() => {
     const fetchStatistics = async () => {
@@ -119,11 +79,10 @@ const Statistics: React.FC = () => {
       setLoading(true);
       try {
         const response = await api.get(
-          `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/statistics${selectedMatchType ? `?match_type_id=${selectedMatchType}` : ''}`
+          `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/statistics`
         );
         setStatistics(response.data);
       } catch (err) {
-        message.error("获取统计数据失败");
         console.error(err);
       } finally {
         setLoading(false);
@@ -131,7 +90,7 @@ const Statistics: React.FC = () => {
     };
 
     fetchStatistics();
-  }, [selectedEnvironment, selectedMatchType]);
+  }, [selectedEnvironment]);
 
   const columns = [
     {
@@ -229,22 +188,6 @@ const Statistics: React.FC = () => {
                     {env.name}
                   </Select.Option>
                 ))}
-              </Select>
-              <Select
-                value={selectedMatchType}
-                onChange={(value) => setSelectedMatchType(value)}
-                style={{ width: 200 }}
-                loading={loading}
-                placeholder="请选择比赛类型"
-                allowClear={userRole !== UserRole.PLAYER}
-              >
-                {matchTypes
-                  .filter((type: MatchType) => userRole !== UserRole.PLAYER || !type.require_permission)
-                  .map((type) => (
-                    <Select.Option key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </Select.Option>
-                  ))}
               </Select>
               <Select
                 value={sortType}

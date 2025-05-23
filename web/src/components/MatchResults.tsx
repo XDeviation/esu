@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Table,
   Button,
@@ -6,15 +6,12 @@ import {
   Space,
   Popconfirm,
   Form,
-  Select,
 } from "antd";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import api, { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
 import BatchMatchModal from './BatchMatchModal';
 import { handleBatchSubmit as submitBatchMatch } from '../utils/matchResults';
-import { UserRole } from '../types';
-import debounce from 'lodash/debounce';
 
 interface MatchResult {
   id: number;
@@ -25,8 +22,6 @@ interface MatchResult {
   first_player: "first" | "second";
   win: "first" | "second";
   created_at: string;
-  winning_deck_id: number;
-  losing_deck_id: number;
 }
 
 interface Environment {
@@ -44,7 +39,6 @@ interface Deck {
 interface MatchType {
   id: number;
   name: string;
-  require_permission: boolean;
 }
 
 interface BatchMatch {
@@ -62,19 +56,6 @@ const MatchResults: React.FC = () => {
   const [form] = Form.useForm();
   const [batchForm] = Form.useForm();
   const location = useLocation();
-  const [selectedEnvironment, setSelectedEnvironment] = useState<number | undefined>();
-  const [selectedMatchType, setSelectedMatchType] = useState<number | undefined>();
-  const [selectedDeck, setSelectedDeck] = useState<number | undefined>();
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
-
-  const fetchUserInfo = useCallback(async () => {
-    try {
-      const response = await api.get(API_ENDPOINTS.USERS_ME);
-      setUserRole(response.data.role);
-    } catch (error) {
-      console.error("获取用户信息失败:", error);
-    }
-  }, []);
 
   const fetchMatchResults = useCallback(async () => {
     try {
@@ -114,23 +95,11 @@ const MatchResults: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
       setMatchTypes(response.data);
-      // 设置默认的对局类型
-      if (response.data.length > 0) {
-        // 如果是普通玩家，选择第一个不需要权限的比赛类型
-        if (userRole === UserRole.PLAYER) {
-          const firstAvailableType = response.data.find((type: MatchType) => !type.require_permission);
-          if (firstAvailableType) {
-            setSelectedMatchType(firstAvailableType.id);
-          }
-        } else {
-          // 对于管理员和版主，选择第一个比赛类型
-          setSelectedMatchType(response.data[0].id);
-        }
-      }
     } catch (error) {
-      message.error("获取比赛类型失败");
+      console.error("获取比赛类型列表失败:", error);
+      message.error("获取比赛类型列表失败");
     }
-  }, [userRole]);
+  }, []);
 
   // 监听路由变化
   useEffect(() => {
@@ -138,7 +107,7 @@ const MatchResults: React.FC = () => {
       fetchMatchResults();
       fetchEnvironments();
       fetchDecks();
-      fetchUserInfo();
+      fetchMatchTypes();
     }
 
     // 检查URL参数
@@ -170,12 +139,7 @@ const MatchResults: React.FC = () => {
     fetchMatchTypes,
     location.search,
     batchForm,
-    fetchUserInfo,
   ]);
-
-  useEffect(() => {
-    fetchMatchTypes();
-  }, [fetchMatchTypes]);
 
   const handleEdit = (record: MatchResult) => {
     form.setFieldsValue(record);
@@ -219,49 +183,7 @@ const MatchResults: React.FC = () => {
     setBatchModalVisible(true);
   };
 
-  const filteredMatchResults = useMemo(() => {
-    return matchResults.filter((result: MatchResult) => {
-      const environmentMatch = !selectedEnvironment || result.environment_id === selectedEnvironment;
-      const matchTypeMatch = !selectedMatchType || result.match_type_id === selectedMatchType;
-      const deckMatch = !selectedDeck || 
-        result.first_deck_id === selectedDeck || 
-        result.second_deck_id === selectedDeck ||
-        result.winning_deck_id === selectedDeck ||
-        result.losing_deck_id === selectedDeck;
-      return environmentMatch && matchTypeMatch && deckMatch;
-    });
-  }, [matchResults, selectedEnvironment, selectedMatchType, selectedDeck]);
-
-  // 使用 Map 优化查找操作
-  const environmentsMap = useMemo(() => {
-    return new Map(environments.map(env => [env.id, env]));
-  }, [environments]);
-
-  const decksMap = useMemo(() => {
-    return new Map(decks.map(deck => [deck.id, deck]));
-  }, [decks]);
-
-  const matchTypesMap = useMemo(() => {
-    return new Map(matchTypes.map(type => [type.id, type]));
-  }, [matchTypes]);
-
-  // 防抖处理筛选操作
-  const debouncedSetSelectedEnvironment = useCallback(
-    debounce((value: number | undefined) => {
-      setSelectedEnvironment(value);
-    }, 300),
-    []
-  );
-
-  const debouncedSetSelectedDeck = useCallback(
-    debounce((value: number | undefined) => {
-      setSelectedDeck(value);
-    }, 300),
-    []
-  );
-
-  // 缓存 columns 定义
-  const columns = useMemo(() => [
+  const columns = [
     {
       title: "ID",
       dataIndex: "id",
@@ -273,7 +195,7 @@ const MatchResults: React.FC = () => {
       dataIndex: "environment_id",
       key: "environment_id",
       render: (id: number) => {
-        const environment = environmentsMap.get(id);
+        const environment = environments.find((env) => env.id === id);
         return environment ? environment.name : id;
       },
     },
@@ -282,7 +204,7 @@ const MatchResults: React.FC = () => {
       dataIndex: "first_deck_id",
       key: "first_deck_id",
       render: (id: number) => {
-        const deck = decksMap.get(id);
+        const deck = decks.find((d) => d.id === id);
         return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
@@ -291,7 +213,7 @@ const MatchResults: React.FC = () => {
       dataIndex: "second_deck_id",
       key: "second_deck_id",
       render: (id: number) => {
-        const deck = decksMap.get(id);
+        const deck = decks.find((d) => d.id === id);
         return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
@@ -300,7 +222,7 @@ const MatchResults: React.FC = () => {
       dataIndex: "winning_deck_id",
       key: "winning_deck_id",
       render: (id: number) => {
-        const deck = decksMap.get(id);
+        const deck = decks.find((d) => d.id === id);
         return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
@@ -309,7 +231,7 @@ const MatchResults: React.FC = () => {
       dataIndex: "losing_deck_id",
       key: "losing_deck_id",
       render: (id: number) => {
-        const deck = decksMap.get(id);
+        const deck = decks.find((d) => d.id === id);
         return deck ? `${deck.name} (${deck.author_id})` : id;
       },
     },
@@ -318,7 +240,7 @@ const MatchResults: React.FC = () => {
       dataIndex: "match_type_id",
       key: "match_type_id",
       render: (id: number) => {
-        const matchType = matchTypesMap.get(id);
+        const matchType = matchTypes.find((mt) => mt.id === id);
         return matchType ? matchType.name : id;
       },
     },
@@ -326,7 +248,6 @@ const MatchResults: React.FC = () => {
       title: "操作",
       key: "action",
       width: 200,
-      fixed: 'right' as const,
       render: (_: unknown, record: MatchResult) => (
         <Space>
           <Button
@@ -349,72 +270,20 @@ const MatchResults: React.FC = () => {
         </Space>
       ),
     },
-  ], [environmentsMap, decksMap, matchTypesMap]);
+  ];
 
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" onClick={handleOpenBatchModal}>
-            添加战绩
-          </Button>
-          <Select
-            style={{ width: 200 }}
-            placeholder="选择环境"
-            allowClear
-            value={selectedEnvironment}
-            onChange={debouncedSetSelectedEnvironment}
-          >
-            {environments.map((env) => (
-              <Select.Option key={env.id} value={env.id}>
-                {env.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Select
-            style={{ width: 200 }}
-            placeholder="选择比赛类型"
-            value={selectedMatchType}
-            onChange={(value) => setSelectedMatchType(value)}
-            allowClear={userRole !== UserRole.PLAYER}
-          >
-            {matchTypes
-              .filter((type: MatchType) => userRole !== UserRole.PLAYER || !type.require_permission)
-              .map((type) => (
-                <Select.Option key={type.id} value={type.id}>
-                  {type.name}
-                </Select.Option>
-              ))}
-          </Select>
-          <Select
-            style={{ width: 200 }}
-            placeholder="选择卡组"
-            allowClear
-            value={selectedDeck}
-            onChange={debouncedSetSelectedDeck}
-            showSearch
-            optionFilterProp="children"
-          >
-            {decks.map((deck) => (
-              <Select.Option key={deck.id} value={deck.id}>
-                {`${deck.name} (${deck.author_id})`}
-              </Select.Option>
-            ))}
-          </Select>
-        </Space>
+        <Button type="primary" onClick={handleOpenBatchModal}>
+          添加战绩
+        </Button>
       </div>
       <Table
         columns={columns}
-        dataSource={filteredMatchResults}
+        dataSource={matchResults}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 'max-content', y: 'calc(100vh - 300px)' }}
-        virtual
-        pagination={{
-          pageSize: 50,
-          showSizeChanger: true,
-          showQuickJumper: true,
-        }}
       />
       <BatchMatchModal
         visible={batchModalVisible}

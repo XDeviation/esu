@@ -8,16 +8,11 @@ import {
   message,
   Space,
   Popconfirm,
-  Card,
-  Typography,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
-import { UserRole } from "../types";
-
-const { Text } = Typography;
 
 interface Environment {
   id: number;
@@ -32,16 +27,6 @@ const Environments: React.FC = () => {
     useState<Environment | null>(null);
   const [form] = Form.useForm();
   const location = useLocation();
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
-
-  const fetchUserInfo = useCallback(async () => {
-    try {
-      const response = await api.get(API_ENDPOINTS.USERS_ME);
-      setUserRole(response.data.role);
-    } catch (error) {
-      console.error("获取用户信息失败:", error);
-    }
-  }, []);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -59,25 +44,16 @@ const Environments: React.FC = () => {
   useEffect(() => {
     if (location.pathname === "/environments") {
       fetchEnvironments();
-      fetchUserInfo();
     }
-  }, [location.pathname, fetchEnvironments, fetchUserInfo]);
+  }, [location.pathname, fetchEnvironments]);
 
   const handleCreate = () => {
-    if (userRole === UserRole.PLAYER) {
-      message.error("权限不足，请联系管理员");
-      return;
-    }
     setEditingEnvironment(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record: Environment) => {
-    if (userRole === UserRole.PLAYER) {
-      message.error("权限不足，请联系管理员");
-      return;
-    }
     setEditingEnvironment(record);
     form.setFieldsValue(record);
     setModalVisible(true);
@@ -95,11 +71,6 @@ const Environments: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
-      if (userRole === UserRole.PLAYER) {
-        message.error("权限不足，请联系管理员");
-        return;
-      }
-
       const values = await form.validateFields();
       if (editingEnvironment) {
         await api.put(
@@ -134,7 +105,6 @@ const Environments: React.FC = () => {
       title: "操作",
       key: "action",
       width: 200,
-      hidden: userRole === UserRole.PLAYER,
       render: (_: unknown, record: Environment) => (
         <Space>
           <Button
@@ -157,24 +127,14 @@ const Environments: React.FC = () => {
         </Space>
       ),
     },
-  ].filter(column => !column.hidden);
+  ];
 
   return (
     <div>
-      {userRole === UserRole.PLAYER && (
-        <Card style={{ marginBottom: 16, backgroundColor: '#fffbe6' }}>
-          <Typography.Text type="warning">
-            <InfoCircleOutlined style={{ marginRight: 8 }} />
-            提示：只有管理员和版主可以创建和编辑环境。如需创建环境，请联系管理员。
-          </Typography.Text>
-        </Card>
-      )}
       <div style={{ marginBottom: 16 }}>
-        {userRole !== UserRole.PLAYER && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            创建环境
-          </Button>
-        )}
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+          创建环境
+        </Button>
       </div>
       <Table
         columns={columns}

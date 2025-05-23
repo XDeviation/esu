@@ -8,94 +8,85 @@ import {
   message,
   Space,
   Popconfirm,
-  Switch,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
-import { UserRole } from "../types";
 
 interface MatchType {
   id: number;
   name: string;
-  require_permission: boolean;
-}
-
-interface MatchTypeFormData {
-  name: string;
-  require_permission: boolean;
 }
 
 const MatchTypes: React.FC = () => {
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingMatchType, setEditingMatchType] = useState<MatchType | null>(
+    null
+  );
   const [form] = Form.useForm();
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.PLAYER);
+  const location = useLocation();
 
   const fetchMatchTypes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
       setMatchTypes(response.data);
-    } catch (error) {
-      message.error("获取比赛类型失败");
+    } catch {
+      message.error("获取比赛类型列表失败");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const fetchUserInfo = useCallback(async () => {
-    try {
-      const response = await api.get(API_ENDPOINTS.USERS_ME);
-      setUserRole(response.data.role);
-    } catch (error) {
-      console.error("获取用户信息失败:", error);
-    }
-  }, []);
-
+  // 监听路由变化
   useEffect(() => {
-    fetchMatchTypes();
-    fetchUserInfo();
-  }, [fetchMatchTypes, fetchUserInfo]);
+    if (location.pathname === "/match-types") {
+      fetchMatchTypes();
+    }
+  }, [location.pathname, fetchMatchTypes]);
 
-  const handleAdd = () => {
-    setEditingId(null);
+  const handleCreate = () => {
+    setEditingMatchType(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record: MatchType) => {
-    setEditingId(record.id);
+    setEditingMatchType(record);
     form.setFieldsValue(record);
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
     try {
-      await api.delete(`${API_ENDPOINTS.MATCH_TYPES}${id}`);
+      await api.delete(`${API_ENDPOINTS.MATCH_TYPES}/${id}`);
       message.success("删除成功");
       fetchMatchTypes();
-    } catch (error) {
+    } catch {
       message.error("删除失败");
     }
   };
 
-  const handleSubmit = async (values: MatchTypeFormData) => {
+  const handleSubmit = async () => {
     try {
-      if (editingId) {
-        await api.put(`${API_ENDPOINTS.MATCH_TYPES}${editingId}`, values);
+      const values = await form.validateFields();
+      if (editingMatchType) {
+        await api.put(
+          `${API_ENDPOINTS.MATCH_TYPES}/${editingMatchType.id}`,
+          values
+        );
         message.success("更新成功");
       } else {
         await api.post(API_ENDPOINTS.MATCH_TYPES, values);
-        message.success("添加成功");
+        message.success("创建成功");
       }
       setModalVisible(false);
       fetchMatchTypes();
-    } catch (error) {
-      message.error(editingId ? "更新失败" : "添加失败");
+    } catch {
+      message.error("操作失败");
     }
   };
 
@@ -104,34 +95,19 @@ const MatchTypes: React.FC = () => {
       title: "ID",
       dataIndex: "id",
       key: "id",
-      width: 60,
-      align: "center" as const,
+      width: 80,
     },
     {
-      title: "名称",
+      title: "比赛类型名称",
       dataIndex: "name",
       key: "name",
-      width: 200,
-    },
-    {
-      title: "需要权限",
-      dataIndex: "require_permission",
-      key: "require_permission",
-      width: 100,
-      align: "center" as const,
-      render: (require_permission: boolean) => (
-        <span>{require_permission ? "是" : "否"}</span>
-      ),
-      hidden: userRole === UserRole.PLAYER,
     },
     {
       title: "操作",
       key: "action",
-      width: 160,
-      align: "center" as const,
-      hidden: userRole === UserRole.PLAYER,
-      render: (_: any, record: MatchType) => (
-        <Space size="small">
+      width: 200,
+      render: (_: unknown, record: MatchType) => (
+        <Space>
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -152,67 +128,35 @@ const MatchTypes: React.FC = () => {
         </Space>
       ),
     },
-  ].filter(column => !column.hidden);
+  ];
 
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        {userRole !== UserRole.PLAYER && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-          >
-            添加比赛类型
-          </Button>
-        )}
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+          创建比赛类型
+        </Button>
       </div>
       <Table
         columns={columns}
         dataSource={matchTypes}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 520 }}
-        pagination={{
-          defaultPageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `共 ${total} 条`,
-        }}
       />
       <Modal
-        title={editingId ? "编辑比赛类型" : "添加比赛类型"}
+        title={editingMatchType ? "编辑比赛类型" : "创建比赛类型"}
         open={modalVisible}
+        onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
-        footer={null}
+        destroyOnClose
       >
-        <Form
-          form={form}
-          onFinish={handleSubmit}
-          layout="vertical"
-        >
+        <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="名称"
+            label="比赛类型名称"
             rules={[{ required: true, message: "请输入比赛类型名称" }]}
           >
             <Input />
-          </Form.Item>
-          {userRole !== UserRole.PLAYER && (
-            <Form.Item
-              name="require_permission"
-              label="需要权限"
-              valuePropName="checked"
-            >
-              <Switch />
-            </Form.Item>
-          )}
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                {editingId ? "更新" : "添加"}
-              </Button>
-              <Button onClick={() => setModalVisible(false)}>取消</Button>
-            </Space>
           </Form.Item>
         </Form>
       </Modal>

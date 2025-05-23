@@ -78,11 +78,7 @@ async def get_environment_statistics(
 
 
 @router.get("/environments/{environment_id}/deck-matchups")
-async def get_deck_matchups(
-    environment_id: int, 
-    match_type_id: int = None,
-    current_user: dict = get_current_user
-):
+async def get_deck_matchups(environment_id: int, current_user: dict = get_current_user):
     """
     获取特定环境下所有卡组之间的相互胜率
     """
@@ -96,13 +92,10 @@ async def get_deck_matchups(
         decks = await db.decks.find({"environment_id": environment_id}).to_list(None)
         deck_map = {str(deck["id"]): deck["name"] for deck in decks}
 
-        # 构建查询条件
-        query = {"environment_id": environment_id}
-        if match_type_id:
-            query["match_type_id"] = match_type_id
-
         # 获取该环境下的所有对战记录
-        match_results = await db.match_results.find(query).to_list(None)
+        match_results = await db.match_results.find(
+            {"environment_id": environment_id}
+        ).to_list(None)
 
         # 统计卡组间的对战数据
         matchup_stats = {}
