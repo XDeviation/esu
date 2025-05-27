@@ -1,3 +1,5 @@
+import secrets
+import string
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,6 +10,20 @@ from ...models.match_type import MatchType, MatchTypeCreate
 from ..deps import get_current_user
 
 router = APIRouter()
+
+
+class JoinGroupRequest(BaseModel):
+    invite_code: str
+
+
+async def generate_invite_code(length: int = 8) -> str:
+    """生成指定长度的随机邀请码"""
+    alphabet = string.ascii_letters + string.digits  # 使用字母和数字
+    while True:
+        code = "".join(secrets.choice(alphabet) for _ in range(length))
+        # 检查邀请码是否已存在
+        if not await db.match_types.find_one({"invite_code": code}):
+            return code
 
 
 async def get_next_id():
@@ -33,6 +49,14 @@ async def create_match_type(
     # 创建比赛类型
     match_type_dict = match_type.model_dump()
     match_type_dict["id"] = match_type_id
+
+    # 如果是私有分组，生成邀请码
+    if match_type_dict.get("is_private", False):
+        match_type_dict["invite_code"] = await generate_invite_code()
+        match_type_dict["users"] = [current_user.id]  # 创建者自动加入分组
+    else:
+        match_type_dict["invite_code"] = None
+        match_type_dict["users"] = []
 
     await db.match_types.insert_one(match_type_dict)
     return MatchType(**match_type_dict)
@@ -100,3 +124,33 @@ async def delete_match_type(
     # 删除比赛类型
     await db.match_types.delete_one({"id": match_type_id})
     return {"message": "比赛类型已删除"}
+
+
+@router.post("/join", response_model=MatchType)
+async def join_match_type(
+    join_request: JoinGroupRequest, current_user: dict = Depends(get_current_user)
+):
+    # 查找对应邀请码的比赛类型
+    match_type = await db.match_types.find_one(
+        {"invite_code": join_request.invite_code}
+    )
+    if not match_type:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="邀请码无效或已过期"
+        )
+
+    # 检查用户是否已经在分组中
+    if current_user["id"] in match_type.get("users", []):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="您已经在该分组中"
+        )
+
+    # 将用户添加到分组
+    await db.match_types.update_one(
+        {"id": match_type["id"]},
+        {"$addToSet": {"users": current_user["id"]}},  # 使用 addToSet 避免重复添加
+    )
+
+    # 返回更新后的比赛类型信息
+    updated_match_type = await db.match_types.find_one({"id": match_type["id"]})
+    return MatchType(**updated_match_type)

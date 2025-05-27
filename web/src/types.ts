@@ -13,6 +13,9 @@ export interface Deck {
 export interface MatchType {
   id: number;
   name: string;
+  is_private: boolean;
+  invite_code?: string;
+  users: string[];
 }
 
 export interface MatchResult {
@@ -46,4 +49,4 @@ export interface DeckStatistics {
 export interface BatchMatch {
   first_player: "first" | "second";
   win: "first" | "second";
-} 
+}

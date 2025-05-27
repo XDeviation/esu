@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   DECKS: `${API_BASE_URL}/api/v1/decks/`,
   MATCH_TYPES: `${API_BASE_URL}/api/v1/match-types/`,
   MATCH_RESULTS: `${API_BASE_URL}/api/v1/match-results/`,
+  USERS: `${API_BASE_URL}/api/v1/users/`,
 } as const;
 
 // 创建 axios 实例
@@ -17,7 +18,7 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 5000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 

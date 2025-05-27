@@ -5,5 +5,6 @@ from . import (
     match_results,
     match_types,
     statistics,
+    users,
     win_rates,
-) 
+)

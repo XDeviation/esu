@@ -8,15 +8,29 @@ import {
   message,
   Space,
   Popconfirm,
+  Switch,
+  Typography,
+  Tag,
+  Tooltip,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
+import { MatchType } from "../types";
 
-interface MatchType {
-  id: number;
+const { Text } = Typography;
+
+interface User {
+  id: string;
   name: string;
+  email: string;
 }
 
 const MatchTypes: React.FC = () => {
@@ -26,8 +40,36 @@ const MatchTypes: React.FC = () => {
   const [editingMatchType, setEditingMatchType] = useState<MatchType | null>(
     null
   );
+  const [users, setUsers] = useState<Record<string, User>>({});
   const [form] = Form.useForm();
   const location = useLocation();
+
+  // 获取用户信息
+  const fetchUsers = useCallback(
+    async (userIds: string[], existingUsers: Record<string, User>) => {
+      try {
+        const uniqueIds = [...new Set(userIds)];
+        const idsToFetch = uniqueIds.filter((id) => !existingUsers[id]);
+
+        if (idsToFetch.length > 0) {
+          const response = await api.post(`${API_ENDPOINTS.USERS}batch`, {
+            user_ids: idsToFetch,
+          });
+          const newUsers = response.data.reduce(
+            (acc: Record<string, User>, user: User) => {
+              acc[user.id] = user;
+              return acc;
+            },
+            {}
+          );
+          setUsers((prev) => ({ ...prev, ...newUsers }));
+        }
+      } catch (error) {
+        console.error("获取用户信息失败", error);
+      }
+    },
+    []
+  );
 
   const fetchMatchTypes = useCallback(async () => {
     try {
@@ -40,6 +82,16 @@ const MatchTypes: React.FC = () => {
       setLoading(false);
     }
   }, []);
+
+  // 监听比赛类型变化，更新用户信息
+  useEffect(() => {
+    if (matchTypes.length > 0) {
+      const allUserIds = matchTypes.flatMap((mt) => mt.users || []);
+      if (allUserIds.length > 0) {
+        fetchUsers(allUserIds, users);
+      }
+    }
+  }, [matchTypes, fetchUsers]);
 
   // 监听路由变化
   useEffect(() => {
@@ -90,6 +142,41 @@ const MatchTypes: React.FC = () => {
     }
   };
 
+  const copyInviteCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      message.success("邀请码已复制到剪贴板");
+    } catch {
+      message.error("复制失败，请手动复制");
+    }
+  };
+
+  const renderUserList = (userIds: string[]) => {
+    if (!userIds || userIds.length === 0) return null;
+
+    const displayCount = 3; // 默认显示的用户数量
+    const displayUsers = userIds.slice(0, displayCount);
+    const remainingCount = userIds.length - displayCount;
+
+    return (
+      <Space size={4}>
+        {displayUsers.map((userId) => (
+          <Tag key={userId}>{users[userId]?.name || userId}</Tag>
+        ))}
+        {remainingCount > 0 && (
+          <Tooltip
+            title={userIds
+              .slice(displayCount)
+              .map((userId) => users[userId]?.name || userId)
+              .join(", ")}
+          >
+            <Tag icon={<TeamOutlined />}>+{remainingCount}</Tag>
+          </Tooltip>
+        )}
+      </Space>
+    );
+  };
+
   const columns = [
     {
       title: "ID",
@@ -101,6 +188,37 @@ const MatchTypes: React.FC = () => {
       title: "比赛类型名称",
       dataIndex: "name",
       key: "name",
+    },
+    {
+      title: "类型",
+      key: "is_private",
+      width: 100,
+      render: (_: unknown, record: MatchType) => (
+        <Text>{record.is_private ? "私有" : "公开"}</Text>
+      ),
+    },
+    {
+      title: "邀请码",
+      key: "invite_code",
+      width: 200,
+      render: (_: unknown, record: MatchType) =>
+        record.is_private && record.invite_code ? (
+          <Space>
+            <Text code>{record.invite_code}</Text>
+            <Button
+              type="text"
+              icon={<CopyOutlined />}
+              onClick={() => copyInviteCode(record.invite_code!)}
+            />
+          </Space>
+        ) : null,
+    },
+    {
+      title: "成员",
+      key: "users",
+      width: 300,
+      render: (_: unknown, record: MatchType) =>
+        record.is_private ? renderUserList(record.users) : null,
     },
     {
       title: "操作",
@@ -157,6 +275,14 @@ const MatchTypes: React.FC = () => {
             rules={[{ required: true, message: "请输入比赛类型名称" }]}
           >
             <Input />
+          </Form.Item>
+          <Form.Item
+            name="is_private"
+            label="私有类型"
+            valuePropName="checked"
+            initialValue={false}
+          >
+            <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
         </Form>
       </Modal>

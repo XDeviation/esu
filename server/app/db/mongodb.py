@@ -1,5 +1,5 @@
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from fastapi import Depends
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
 from ..core.config import config
 
@@ -33,6 +33,13 @@ class MongoDB:
         collections = await cls.db.list_collection_names()
 
         # 如果集合不存在，则创建集合和索引
+        if "users" not in collections:
+            await cls.db.create_collection("users")
+            collection = cls.db.get_collection("users")
+            await collection.create_index("id", unique=True)  # 使用 id 作为唯一索引
+            await collection.create_index("email", unique=True)
+            await collection.create_index("name")
+
         if "environments" not in collections:
             await cls.db.create_collection("environments")
             collection = cls.db.get_collection("environments")
@@ -52,10 +59,22 @@ class MongoDB:
             collection = cls.db.get_collection("match_types")
             await collection.create_index("name", unique=True)
             await collection.create_index("id", unique=True)
+            await collection.create_index(
+                "invite_code", sparse=True
+            )  # 只为非空的 invite_code 创建索引
+            await collection.create_index("users")  # 为用户列表创建索引
             # 创建默认比赛类型
             await collection.update_one(
                 {"name": "普通对战"},
-                {"$setOnInsert": {"id": 1, "name": "普通对战"}},
+                {
+                    "$setOnInsert": {
+                        "id": 1,
+                        "name": "普通对战",
+                        "is_private": False,
+                        "invite_code": None,
+                        "users": [],
+                    }
+                },
                 upsert=True,
             )
 
@@ -93,6 +112,10 @@ class MongoDB:
         return cls.db[collection_name]
 
     @property
+    def users(self):
+        return self.db.get_collection("users")
+
+    @property
     def environments(self):
         return self.db.get_collection("environments")
 
@@ -114,6 +137,7 @@ class MongoDB:
 
 
 db = MongoDB()
+
 
 async def get_database() -> AsyncIOMotorDatabase:
     return db.db

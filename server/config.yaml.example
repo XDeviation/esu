@@ -19,7 +19,7 @@ cors:
 jwt:
   secret_key: "your-secret-key-here"
   algorithm: "HS256"
-  access_token_expire_minutes: 720
+  access_token_expire_minutes: 43200
 
 mongodb:
   uri: "mongodb://username:password@localhost:27017"

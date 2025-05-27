@@ -10,6 +10,7 @@ from .api.endpoints import (
     match_results,
     match_types,
     statistics,
+    users,
     win_rates,
 )
 from .core.config import config
@@ -53,3 +54,4 @@ app.include_router(
 )
 app.include_router(statistics.router, prefix="/api/v1", tags=["statistics"])
 app.include_router(win_rates.router, prefix="/api/v1/win-rates", tags=["win-rates"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
