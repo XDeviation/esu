@@ -1,7 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import api, { API_BASE_URL } from '../config/api';
-import { Card, Table, Typography, Spin, Button, Row, Col, Space, Select } from 'antd';
-
+import React, { useState, useEffect, useCallback } from "react";
+import { API_ENDPOINTS } from "../config/api";
+import {
+  message,
+  Select,
+  Card,
+  Table,
+  Typography,
+  Spin,
+  Row,
+  Col,
+  Space,
+  Button,
+} from "antd";
+import api from "../config/api";
+import { useLocation } from "react-router-dom";
+import { MatchType } from "../types";
+import type { ColumnsType } from "antd/es/table";
 
 const { Title } = Typography;
 
@@ -29,60 +43,95 @@ interface WinRateCalculationResponse {
 }
 
 const WinRateTable: React.FC = () => {
-  const [calculations, setCalculations] = useState<Record<number, WinRateCalculation>>({});
+  const [calculations, setCalculations] = useState<
+    Record<number, WinRateCalculation>
+  >({});
   const [decks, setDecks] = useState<Record<number, Deck>>({});
   const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [selectedEnvironment, setSelectedEnvironment] = useState<number | undefined>();
+  const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<
+    number | undefined
+  >();
+  const [selectedMatchType, setSelectedMatchType] = useState<string>("");
   const [sensitivity, setSensitivity] = useState<number>(30.0);
   const [loading, setLoading] = useState<boolean>(false);
+  const location = useLocation();
 
-  const fetchEnvironments = async () => {
+  const fetchEnvironments = useCallback(async () => {
     try {
-      const response = await api.get<Environment[]>(`${API_BASE_URL}/api/v1/environments`);
+      setLoading(true);
+      const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
       setEnvironments(response.data);
-      // 默认选择最新的环境
       if (response.data.length > 0) {
         const latestEnv = response.data[response.data.length - 1];
         setSelectedEnvironment(latestEnv.id);
       }
     } catch (error) {
-      console.error('Error fetching environments:', error);
+      console.error("Error fetching environments:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchMatchTypes = async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
+      setMatchTypes(response.data);
+    } catch (error) {
+      console.error("Error fetching match types:", error);
     }
   };
 
   const fetchDecks = async () => {
     try {
-      const response = await api.get<Deck[]>(`${API_BASE_URL}/api/v1/decks`);
-      const decksMap = response.data.reduce((acc, deck) => {
-        acc[deck.id] = deck;
-        return acc;
-      }, {} as Record<number, Deck>);
+      const response = await api.get(API_ENDPOINTS.DECKS);
+      const decksMap = response.data.reduce(
+        (acc: Record<number, Deck>, deck: Deck) => {
+          acc[deck.id] = deck;
+          return acc;
+        },
+        {} as Record<number, Deck>
+      );
       setDecks(decksMap);
     } catch (error) {
-      console.error('Error fetching decks:', error);
+      console.error("Error fetching decks:", error);
     }
   };
 
   const fetchWinRates = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.post<WinRateCalculationResponse>(`${API_BASE_URL}/api/v1/win-rates/calculate`, {
-        sensitivity,
-        environment_offsets: null
-      });
+      const params = new URLSearchParams();
+      params.append("sensitivity", sensitivity.toString());
+      if (selectedMatchType) {
+        params.append("match_type_id", selectedMatchType);
+      }
+      if (selectedEnvironment) {
+        params.append("environment_id", selectedEnvironment.toString());
+      }
+      const response = await api.get<WinRateCalculationResponse>(
+        `${API_ENDPOINTS.WIN_RATES}/calculate?${params.toString()}`
+      );
       setCalculations(response.data.calculations);
     } catch (error) {
-      console.error('Error fetching win rates:', error);
+      console.error("Error fetching win rates:", error);
+      message.error("获取胜率数据失败");
     } finally {
       setLoading(false);
     }
-  }, [sensitivity]);
+  }, [sensitivity, selectedMatchType, selectedEnvironment]);
 
   useEffect(() => {
-    fetchEnvironments();
-    fetchDecks();
+    if (location.pathname === "/win-rate-table") {
+      fetchEnvironments();
+      fetchDecks();
+      fetchMatchTypes();
+    }
+  }, [location.pathname, fetchEnvironments]);
+
+  useEffect(() => {
     fetchWinRates();
-  }, [sensitivity, fetchWinRates]);
+  }, [sensitivity, selectedMatchType, selectedEnvironment, fetchWinRates]);
 
   interface TableRecord {
     deck_id: number;
@@ -90,7 +139,7 @@ const WinRateTable: React.FC = () => {
     weighted_win_rate: number;
   }
 
-  const columns = [
+  const columns: ColumnsType<TableRecord> = [
     {
       title: "卡组ID",
       dataIndex: "deck_id",
@@ -102,14 +151,16 @@ const WinRateTable: React.FC = () => {
       dataIndex: "deck_name",
       key: "deck_name",
       width: 200,
-      render: (_: string, record: TableRecord) => decks[record.deck_id]?.name || '未知卡组',
+      render: (_: string, record: TableRecord) =>
+        decks[record.deck_id]?.name || "未知卡组",
     },
     {
       title: "平均胜率",
       dataIndex: "average_win_rate",
       key: "average_win_rate",
       width: 120,
-      sorter: (a: TableRecord, b: TableRecord) => a.average_win_rate - b.average_win_rate,
+      sorter: (a: TableRecord, b: TableRecord) =>
+        a.average_win_rate - b.average_win_rate,
       render: (value: number) => `${(value * 100).toFixed(2)}%`,
     },
     {
@@ -117,7 +168,8 @@ const WinRateTable: React.FC = () => {
       dataIndex: "weighted_win_rate",
       key: "weighted_win_rate",
       width: 120,
-      sorter: (a: TableRecord, b: TableRecord) => a.weighted_win_rate - b.weighted_win_rate,
+      sorter: (a: TableRecord, b: TableRecord) =>
+        a.weighted_win_rate - b.weighted_win_rate,
       render: (value: number) => `${(value * 100).toFixed(2)}%`,
     },
   ];
@@ -125,7 +177,9 @@ const WinRateTable: React.FC = () => {
   const dataSource = Object.entries(calculations)
     .filter(([deckId]) => {
       const deck = decks[Number(deckId)];
-      return !selectedEnvironment || deck?.environment_id === selectedEnvironment;
+      return (
+        !selectedEnvironment || deck?.environment_id === selectedEnvironment
+      );
     })
     .map(([deckId, calc]) => ({
       key: deckId,
@@ -137,13 +191,13 @@ const WinRateTable: React.FC = () => {
 
   const handleEvolutionPhaseChange = (value: string) => {
     switch (value) {
-      case 'early':
+      case "early":
         setSensitivity(20.0);
         break;
-      case 'mid':
+      case "mid":
         setSensitivity(30.0);
         break;
-      case 'late':
+      case "late":
         setSensitivity(40.0);
         break;
       default:
@@ -184,8 +238,26 @@ const WinRateTable: React.FC = () => {
                   <Select.Option value="mid">中期</Select.Option>
                   <Select.Option value="late">末期</Select.Option>
                 </Select>
-                <Button type="primary" onClick={fetchWinRates} loading={loading}>
-                  {loading ? '加载中...' : '刷新'}
+                <Select
+                  style={{ width: 200 }}
+                  placeholder="选择比赛类型"
+                  allowClear
+                  value={selectedMatchType}
+                  onChange={(value) => setSelectedMatchType(value)}
+                >
+                  <Select.Option value="">全部</Select.Option>
+                  {matchTypes.map((mt) => (
+                    <Select.Option key={mt.id} value={mt.id.toString()}>
+                      {mt.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Button
+                  type="primary"
+                  onClick={fetchWinRates}
+                  loading={loading}
+                >
+                  {loading ? "加载中..." : "刷新"}
                 </Button>
               </Space>
             </Space>
@@ -207,4 +279,4 @@ const WinRateTable: React.FC = () => {
   );
 };
 
-export default WinRateTable; 
+export default WinRateTable;

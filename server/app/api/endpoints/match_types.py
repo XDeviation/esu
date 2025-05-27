@@ -63,9 +63,27 @@ async def create_match_type(
 
 
 @router.get("/", response_model=List[MatchType])
-async def read_match_types():
-    match_types = await db.match_types.find().to_list(length=None)
-    return [MatchType(**mt) for mt in match_types]
+async def read_match_types(current_user: dict = Depends(get_current_user)):
+    # 获取所有公开的比赛类型（包括 is_private 为 false 或 null 的情况）
+    public_match_types = await db.match_types.find(
+        {
+            "$or": [
+                {"is_private": False},
+                {"is_private": None},
+                {"is_private": {"$exists": False}},
+            ]
+        }
+    ).to_list(length=None)
+
+    # 获取用户所在的私有比赛类型
+    private_match_types = await db.match_types.find(
+        {"is_private": True, "users": current_user.id}
+    ).to_list(length=None)
+
+    # 合并结果
+    all_match_types = public_match_types + private_match_types
+
+    return [MatchType(**mt) for mt in all_match_types]
 
 
 @router.get("/{match_type_id}", response_model=MatchType)
@@ -140,7 +158,7 @@ async def join_match_type(
         )
 
     # 检查用户是否已经在分组中
-    if current_user["id"] in match_type.get("users", []):
+    if current_user.id in match_type.get("users", []):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="您已经在该分组中"
         )
@@ -148,7 +166,7 @@ async def join_match_type(
     # 将用户添加到分组
     await db.match_types.update_one(
         {"id": match_type["id"]},
-        {"$addToSet": {"users": current_user["id"]}},  # 使用 addToSet 避免重复添加
+        {"$addToSet": {"users": current_user.id}},  # 使用 addToSet 避免重复添加
     )
 
     # 返回更新后的比赛类型信息

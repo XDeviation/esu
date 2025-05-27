@@ -37,11 +37,18 @@ interface EnvironmentStatistics {
   deck_statistics: DeckStatistics[];
 }
 
+interface MatchType {
+  id: number;
+  name: string;
+}
+
 type SortType = "total_matches_desc" | "win_rate_desc";
 
 const Statistics: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
+  const [selectedMatchType, setSelectedMatchType] = useState<string>("");
   const [statistics, setStatistics] = useState<EnvironmentStatistics | null>(
     null
   );
@@ -66,9 +73,19 @@ const Statistics: React.FC = () => {
     }
   }, []);
 
+  const fetchMatchTypes = async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
+      setMatchTypes(response.data);
+    } catch (error) {
+      console.error("获取比赛类型列表失败", error);
+    }
+  };
+
   useEffect(() => {
     if (location.pathname === "/statistics") {
       fetchEnvironments();
+      fetchMatchTypes();
     }
   }, [location.pathname, fetchEnvironments]);
 
@@ -78,19 +95,26 @@ const Statistics: React.FC = () => {
 
       setLoading(true);
       try {
+        const params = new URLSearchParams({
+          environment_id: selectedEnvironment,
+        });
+        if (selectedMatchType) {
+          params.append("match_type_id", selectedMatchType);
+        }
         const response = await api.get(
-          `${API_ENDPOINTS.ENVIRONMENTS}${selectedEnvironment}/statistics`
+          `${API_ENDPOINTS.STATISTICS}?${params.toString()}`
         );
         setStatistics(response.data);
       } catch (err) {
-        console.error(err);
+        console.error("获取统计数据失败", err);
+        message.error("获取统计数据失败");
       } finally {
         setLoading(false);
       }
     };
 
     fetchStatistics();
-  }, [selectedEnvironment]);
+  }, [selectedEnvironment, selectedMatchType, sortType]);
 
   const columns = [
     {
@@ -143,10 +167,14 @@ const Statistics: React.FC = () => {
       { total: 0, wins: 0, losses: 0 }
     );
 
-    const winRate = totals.total > 0 ? (totals.wins / totals.total) * 100 : 0;
+    // 总场数除以2，因为每场对战都统计了两次
+    const totalMatches = totals.total / 2;
+    const winRate = totalMatches > 0 ? (totals.wins / totalMatches) * 100 : 0;
 
     return {
-      ...totals,
+      total: Math.round(totalMatches),
+      wins: totals.wins,
+      losses: totals.losses,
       winRate: Number(winRate.toFixed(2)),
     };
   };
@@ -155,7 +183,7 @@ const Statistics: React.FC = () => {
 
   const getSortedStatistics = () => {
     if (!statistics) return [];
-    
+
     const sortedStats = [...statistics.deck_statistics];
     switch (sortType) {
       case "total_matches_desc":
@@ -190,12 +218,29 @@ const Statistics: React.FC = () => {
                 ))}
               </Select>
               <Select
+                value={selectedMatchType}
+                onChange={(value) => setSelectedMatchType(value)}
+                style={{ width: 200 }}
+                loading={loading}
+                placeholder="请选择比赛类型"
+                allowClear
+              >
+                <Select.Option value="">全部</Select.Option>
+                {matchTypes.map((mt) => (
+                  <Select.Option key={mt.id} value={mt.id.toString()}>
+                    {mt.name}
+                  </Select.Option>
+                ))}
+              </Select>
+              <Select
                 value={sortType}
                 onChange={(value) => setSortType(value)}
                 style={{ width: 150 }}
                 placeholder="排序方式"
               >
-                <Select.Option value="total_matches_desc">总场数降序</Select.Option>
+                <Select.Option value="total_matches_desc">
+                  总场数降序
+                </Select.Option>
                 <Select.Option value="win_rate_desc">胜率降序</Select.Option>
               </Select>
               {statistics && (

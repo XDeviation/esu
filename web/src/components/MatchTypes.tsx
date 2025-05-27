@@ -24,6 +24,7 @@ import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
 import { MatchType } from "../types";
+import { AxiosError } from "axios";
 
 const { Text } = Typography;
 
@@ -37,11 +38,13 @@ const MatchTypes: React.FC = () => {
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [joinModalVisible, setJoinModalVisible] = useState(false);
   const [editingMatchType, setEditingMatchType] = useState<MatchType | null>(
     null
   );
   const [users, setUsers] = useState<Record<string, User>>({});
   const [form] = Form.useForm();
+  const [joinForm] = Form.useForm();
   const location = useLocation();
 
   // 获取用户信息
@@ -74,9 +77,12 @@ const MatchTypes: React.FC = () => {
   const fetchMatchTypes = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
+      const response = await api.get(API_ENDPOINTS.MATCH_TYPES, {
+        withCredentials: true, // 确保发送认证信息
+      });
       setMatchTypes(response.data);
-    } catch {
+    } catch (error) {
+      console.error("获取比赛类型列表失败", error);
       message.error("获取比赛类型列表失败");
     } finally {
       setLoading(false);
@@ -91,7 +97,7 @@ const MatchTypes: React.FC = () => {
         fetchUsers(allUserIds, users);
       }
     }
-  }, [matchTypes, fetchUsers]);
+  }, [matchTypes, fetchUsers, users]);
 
   // 监听路由变化
   useEffect(() => {
@@ -148,6 +154,23 @@ const MatchTypes: React.FC = () => {
       message.success("邀请码已复制到剪贴板");
     } catch {
       message.error("复制失败，请手动复制");
+    }
+  };
+
+  const handleJoin = async () => {
+    try {
+      const values = await joinForm.validateFields();
+      await api.post(`${API_ENDPOINTS.MATCH_TYPES}join`, values);
+      message.success("成功加入比赛类型");
+      setJoinModalVisible(false);
+      joinForm.resetFields();
+      fetchMatchTypes();
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.data?.detail) {
+        message.error(error.response.data.detail);
+      } else {
+        message.error("加入失败");
+      }
     }
   };
 
@@ -251,9 +274,17 @@ const MatchTypes: React.FC = () => {
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          创建比赛类型
-        </Button>
+        <Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            创建比赛类型
+          </Button>
+          <Button
+            icon={<TeamOutlined />}
+            onClick={() => setJoinModalVisible(true)}
+          >
+            加入比赛类型
+          </Button>
+        </Space>
       </div>
       <Table
         columns={columns}
@@ -283,6 +314,26 @@ const MatchTypes: React.FC = () => {
             initialValue={false}
           >
             <Switch checkedChildren="是" unCheckedChildren="否" />
+          </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
+        title="加入比赛类型"
+        open={joinModalVisible}
+        onOk={handleJoin}
+        onCancel={() => {
+          setJoinModalVisible(false);
+          joinForm.resetFields();
+        }}
+        destroyOnClose
+      >
+        <Form form={joinForm} layout="vertical">
+          <Form.Item
+            name="invite_code"
+            label="邀请码"
+            rules={[{ required: true, message: "请输入邀请码" }]}
+          >
+            <Input placeholder="请输入比赛类型的邀请码" />
           </Form.Item>
         </Form>
       </Modal>
