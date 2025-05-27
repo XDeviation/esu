@@ -1,17 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
-import {
-  Table,
-  Button,
-  message,
-  Space,
-  Popconfirm,
-  Form,
-} from "antd";
+import { Table, Button, message, Space, Popconfirm, Form } from "antd";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import api, { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
-import BatchMatchModal from './BatchMatchModal';
-import { handleBatchSubmit as submitBatchMatch } from '../utils/matchResults';
+import BatchMatchModal from "./BatchMatchModal";
+import { handleBatchSubmit as submitBatchMatch } from "../utils/matchResults";
+import { MatchType } from "../types";
 
 interface MatchResult {
   id: number;
@@ -36,11 +30,6 @@ interface Deck {
   environment_id: number;
 }
 
-interface MatchType {
-  id: number;
-  name: string;
-}
-
 interface BatchMatch {
   first_player: "first" | "second";
   win: "first" | "second";
@@ -61,7 +50,9 @@ const MatchResults: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get(API_ENDPOINTS.MATCH_RESULTS);
-      const sortedData = response.data.sort((a: MatchResult, b: MatchResult) => b.id - a.id);
+      const sortedData = response.data.sort(
+        (a: MatchResult, b: MatchResult) => b.id - a.id
+      );
       setMatchResults(sortedData);
     } catch (error) {
       console.error("获取对局结果列表失败:", error);
@@ -112,22 +103,22 @@ const MatchResults: React.FC = () => {
 
     // 检查URL参数
     const params = new URLSearchParams(location.search);
-    const openModal = params.get('open_modal');
-    const firstDeckId = params.get('first_deck_id');
-    const secondDeckId = params.get('second_deck_id');
-    const environmentId = params.get('environment_id');
-    const matchTypeId = params.get('match_type_id');
+    const openModal = params.get("open_modal");
+    const firstDeckId = params.get("first_deck_id");
+    const secondDeckId = params.get("second_deck_id");
+    const environmentId = params.get("environment_id");
+    const matchTypeId = params.get("match_type_id");
 
-    if (openModal === 'true' && firstDeckId && secondDeckId) {
+    if (openModal === "true" && firstDeckId && secondDeckId) {
       // 设置表单数据
       batchForm.setFieldsValue({
         first_deck_id: firstDeckId,
         second_deck_id: secondDeckId,
         environment_id: environmentId,
         match_type_id: matchTypeId,
-        matches: [{ first_player: "first", win: "first" }]
+        matches: [{ first_player: "first", win: "first" }],
       });
-      
+
       // 打开模态框
       setBatchModalVisible(true);
     }
