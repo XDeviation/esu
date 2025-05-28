@@ -10,11 +10,14 @@ import {
   Row,
   Col,
   Space,
+  Form,
 } from "antd";
 import api from "../config/api";
 import { useLocation } from "react-router-dom";
-import { MatchType } from "../types";
+import { MatchType, BatchMatch } from "../types";
 import type { ColumnsType } from "antd/es/table";
+import BatchMatchModal from "./BatchMatchModal";
+import { submitBatchMatch } from "../utils/matchUtils";
 
 const { Title } = Typography;
 
@@ -24,224 +27,123 @@ interface Environment {
 }
 
 interface MatchupStats {
-  opponent_name: string;
-  total: number;
   wins: number;
-  losses: number;
+  total: number;
   win_rate: number;
-  first_hand_total: number;
   first_hand_wins: number;
-  second_hand_total: number;
+  first_hand_total: number;
   second_hand_wins: number;
-}
-
-interface DeckMatchups {
-  deck_name: string;
-  matchups: { [key: string]: MatchupStats };
+  second_hand_total: number;
 }
 
 interface MatchupStatistics {
-  environment_id: number;
-  environment_name: string;
-  matchup_statistics: { [key: string]: DeckMatchups };
+  matchup_statistics: {
+    [key: string]: {
+      deck_name: string;
+      matchups: {
+        [key: string]: MatchupStats;
+      };
+    };
+  };
 }
 
 const DeckMatchups: React.FC = () => {
-  const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
   const [selectedMatchType, setSelectedMatchType] = useState<string>("");
   const [selectedHand, setSelectedHand] = useState<string>("all");
+  const [loading, setLoading] = useState(false);
   const [statistics, setStatistics] = useState<MatchupStatistics | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const location = useLocation();
+  const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
+  const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [batchModalInitialValues, setBatchModalInitialValues] = useState<any>(null);
+  const [batchForm] = Form.useForm();
 
   const fetchEnvironments = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
       setEnvironments(response.data);
       if (response.data.length > 0) {
         const latestEnv = response.data[response.data.length - 1];
         setSelectedEnvironment(latestEnv.id.toString());
       }
-    } catch {
+    } catch (error) {
+      console.error("获取环境列表失败:", error);
       message.error("获取环境列表失败");
-    } finally {
-      setLoading(false);
     }
   }, []);
 
-  const fetchMatchTypes = async () => {
+  const fetchMatchTypes = useCallback(async () => {
     try {
       const response = await api.get(API_ENDPOINTS.MATCH_TYPES);
       setMatchTypes(response.data);
     } catch (error) {
-      console.error("获取比赛类型列表失败", error);
+      console.error("获取比赛类型列表失败:", error);
+      message.error("获取比赛类型列表失败");
     }
+  }, []);
+
+  const fetchStatistics = useCallback(async () => {
+    if (!selectedEnvironment) return;
+
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        environment_id: selectedEnvironment,
+      });
+      if (selectedMatchType) {
+        params.append("match_type_id", selectedMatchType);
+      }
+      if (selectedHand && selectedHand !== "all") {
+        params.append("hand", selectedHand);
+      }
+      const response = await api.get(
+        `${API_ENDPOINTS.DECK_MATCHUPS}?${params.toString()}`
+      );
+      setStatistics(response.data);
+    } catch (err) {
+      console.error("获取统计数据失败", err);
+      message.error("获取统计数据失败");
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedEnvironment, selectedMatchType, selectedHand]);
+
+  useEffect(() => {
+    fetchEnvironments();
+    fetchMatchTypes();
+  }, [fetchEnvironments, fetchMatchTypes]);
+
+  useEffect(() => {
+    fetchStatistics();
+  }, [fetchStatistics]);
+
+  const handleCellClick = (rowDeckId: string, colDeckId: string) => {
+    const initialValues = {
+      environment_id: parseInt(selectedEnvironment),
+      match_type_id: selectedMatchType ? parseInt(selectedMatchType) : undefined,
+      first_deck_id: parseInt(rowDeckId),
+      second_deck_id: parseInt(colDeckId),
+      matches: [{ first_player: "first", win: "first" }],
+    };
+    
+    setBatchModalInitialValues(initialValues);
+    setBatchModalVisible(true);
   };
 
-  useEffect(() => {
-    if (location.pathname === "/deck-matchups") {
-      fetchEnvironments();
-      fetchMatchTypes();
+  const handleBatchSubmit = async (values: {
+    environment_id: number;
+    match_type_id: number;
+    first_deck_id: number;
+    second_deck_id: number;
+    matches: BatchMatch[];
+    ignore_first_player: boolean;
+  }) => {
+    const success = await submitBatchMatch(values);
+    if (success) {
+      setBatchModalVisible(false);
+      fetchStatistics();
     }
-  }, [location.pathname, fetchEnvironments]);
-
-  useEffect(() => {
-    const fetchStatistics = async () => {
-      if (!selectedEnvironment) return;
-
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({
-          environment_id: selectedEnvironment,
-        });
-        if (selectedMatchType) {
-          params.append("match_type_id", selectedMatchType);
-        }
-        const response = await api.get(
-          `${API_ENDPOINTS.DECK_MATCHUPS}?${params.toString()}`
-        );
-        setStatistics(response.data);
-      } catch (err) {
-        console.error("获取对战数据失败", err);
-        message.error("获取对战数据失败");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStatistics();
-  }, [selectedEnvironment, selectedMatchType]);
-
-  const getMatchupColumns = (): ColumnsType<
-    Record<string, string | MatchupStats | null>
-  > => {
-    const columns: ColumnsType<Record<string, string | MatchupStats | null>> = [
-      {
-        title: "卡组",
-        dataIndex: "deck_name",
-        key: "deck_name",
-        fixed: "left" as const,
-        width: 150,
-      },
-    ];
-
-    // 为每个卡组添加一列
-    if (!statistics) return columns;
-
-    const decks = Object.entries(statistics.matchup_statistics);
-    decks.forEach(([deckId, deck]) => {
-      columns.push({
-        title: deck.deck_name,
-        dataIndex: deckId,
-        key: deckId,
-        width: 150,
-        render: (value: MatchupStats | null) => {
-          if (!value) return "-";
-
-          if (selectedHand === "both") {
-            const firstHandWinRate =
-              value.first_hand_wins && value.first_hand_total
-                ? (value.first_hand_wins / value.first_hand_total) * 100
-                : 0;
-            const secondHandWinRate =
-              value.second_hand_wins && value.second_hand_total
-                ? (value.second_hand_wins / value.second_hand_total) * 100
-                : 0;
-
-            const totalWinRate = value.win_rate;
-            const backgroundColor =
-              totalWinRate > 50
-                ? "rgba(82, 196, 26, 0.1)"
-                : totalWinRate < 50
-                ? "rgba(255, 77, 79, 0.1)"
-                : "transparent";
-
-            return (
-              <div
-                style={{
-                  textAlign: "center",
-                  backgroundColor,
-                  padding: "4px 0",
-                }}
-              >
-                <div>{totalWinRate.toFixed(1)}%</div>
-                <div style={{ fontSize: "12px", color: "#999" }}>
-                  {value.wins}/{value.total}
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-around",
-                    marginTop: "4px",
-                    fontSize: "12px",
-                    color: "#666",
-                  }}
-                >
-                  <div>
-                    先手: {firstHandWinRate.toFixed(1)}%
-                    <br />
-                    {value.first_hand_wins || 0}/{value.first_hand_total || 0}
-                  </div>
-                  <div>
-                    后手: {secondHandWinRate.toFixed(1)}%
-                    <br />
-                    {value.second_hand_wins || 0}/{value.second_hand_total || 0}
-                  </div>
-                </div>
-              </div>
-            );
-          } else {
-            let displayStats = value;
-            if (selectedHand === "first" && value.first_hand_total) {
-              displayStats = {
-                ...value,
-                total: value.first_hand_total,
-                wins: value.first_hand_wins || 0,
-                win_rate: value.first_hand_wins
-                  ? (value.first_hand_wins / value.first_hand_total) * 100
-                  : 0,
-              };
-            } else if (selectedHand === "second" && value.second_hand_total) {
-              displayStats = {
-                ...value,
-                total: value.second_hand_total,
-                wins: value.second_hand_wins || 0,
-                win_rate: value.second_hand_wins
-                  ? (value.second_hand_wins / value.second_hand_total) * 100
-                  : 0,
-              };
-            }
-
-            const backgroundColor =
-              displayStats.win_rate > 50
-                ? "rgba(82, 196, 26, 0.1)"
-                : displayStats.win_rate < 50
-                ? "rgba(255, 77, 79, 0.1)"
-                : "transparent";
-
-            return (
-              <div
-                style={{
-                  textAlign: "center",
-                  backgroundColor,
-                  padding: "4px 0",
-                }}
-              >
-                <div>{displayStats.win_rate.toFixed(1)}%</div>
-                <div style={{ fontSize: "12px", color: "#999" }}>
-                  {displayStats.wins}/{displayStats.total}
-                </div>
-              </div>
-            );
-          }
-        },
-      });
-    });
-
-    return columns;
   };
 
   const getMatchupData = () => {
@@ -254,13 +156,96 @@ const DeckMatchups: React.FC = () => {
         deck_name: deck.deck_name,
       };
 
-      // 为每个卡组添加对战数据
       decks.forEach(([opponentId]) => {
         rowData[opponentId] = deck.matchups[opponentId] || null;
       });
 
       return rowData;
     });
+  };
+
+  const getMatchupColumns = (): ColumnsType<Record<string, string | MatchupStats | null>> => {
+    if (!statistics) return [];
+
+    const columns: ColumnsType<Record<string, string | MatchupStats | null>> = [
+      {
+        title: "卡组",
+        dataIndex: "deck_name",
+        key: "deck_name",
+        fixed: "left" as const,
+        width: 200,
+      },
+    ];
+
+    Object.entries(statistics.matchup_statistics).forEach(([deckId, deck]) => {
+      columns.push({
+        title: deck.deck_name,
+        dataIndex: deckId,
+        key: deckId,
+        width: 150,
+        render: (stats: MatchupStats | null, record: Record<string, string | MatchupStats | null>) => {
+          const rowDeckId = record.key as string;
+          const rowDeck = statistics.matchup_statistics[rowDeckId];
+          const colDeck = statistics.matchup_statistics[deckId];
+          
+          return (
+            <div
+              style={{ 
+                cursor: "pointer",
+                textAlign: "center",
+                backgroundColor: stats ? (stats.win_rate > 50 
+                  ? "rgba(82, 196, 26, 0.1)" 
+                  : stats.win_rate < 50 
+                    ? "rgba(255, 77, 79, 0.1)" 
+                    : "transparent") : "transparent",
+                padding: "4px 0",
+              }}
+              onClick={() => handleCellClick(rowDeckId, deckId)}
+            >
+              {stats ? (
+                selectedHand === "both" ? (
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "0 8px" }}>
+                    <div style={{ flex: 1, borderRight: "1px solid #f0f0f0", paddingRight: "8px" }}>
+                      <div style={{ fontSize: "12px", color: "#666" }}>先手</div>
+                      <div>
+                        {stats.first_hand_total > 0 
+                          ? ((stats.first_hand_wins / stats.first_hand_total) * 100).toFixed(1)
+                          : "0.0"}%
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#999" }}>
+                        {stats.first_hand_wins}/{stats.first_hand_total}
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, paddingLeft: "8px" }}>
+                      <div style={{ fontSize: "12px", color: "#666" }}>后手</div>
+                      <div>
+                        {stats.second_hand_total > 0 
+                          ? ((stats.second_hand_wins / stats.second_hand_total) * 100).toFixed(1)
+                          : "0.0"}%
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#999" }}>
+                        {stats.second_hand_wins}/{stats.second_hand_total}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>{stats.win_rate.toFixed(1)}%</div>
+                    <div style={{ fontSize: "12px", color: "#999" }}>
+                      {stats.wins}/{stats.total}
+                    </div>
+                  </>
+                )
+              ) : (
+                <div style={{ color: "#999" }}>-</div>
+              )}
+            </div>
+          );
+        },
+      });
+    });
+
+    return columns;
   };
 
   return (
@@ -328,6 +313,23 @@ const DeckMatchups: React.FC = () => {
           )}
         </Spin>
       </Card>
+      <BatchMatchModal
+        visible={batchModalVisible}
+        onCancel={() => {
+          setBatchModalVisible(false);
+          setBatchModalInitialValues(null);
+        }}
+        onSubmit={handleBatchSubmit}
+        environments={environments}
+        decks={Object.entries(statistics?.matchup_statistics || {}).map(([id, deck]) => ({
+          id: parseInt(id),
+          name: deck.deck_name,
+          environment_id: parseInt(selectedEnvironment),
+          author_id: "",
+        }))}
+        matchTypes={matchTypes}
+        initialValues={batchModalInitialValues}
+      />
     </div>
   );
 };

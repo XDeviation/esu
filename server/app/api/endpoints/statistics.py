@@ -120,6 +120,7 @@ async def get_environment_statistics(
 async def get_deck_matchups(
     environment_id: int,
     match_type_id: Optional[int] = None,
+    hand: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """
@@ -185,6 +186,12 @@ async def get_deck_matchups(
                     is_first_hand = None
                 else:
                     is_first_hand = first_deck_id == deck_id
+
+                # 根据hand参数过滤对战记录
+                if hand == "first" and not is_first_hand:
+                    continue
+                if hand == "second" and is_first_hand:
+                    continue
 
                 if opponent_id in deck_map:
                     if opponent_id not in opponent_stats:
