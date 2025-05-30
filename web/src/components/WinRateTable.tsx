@@ -195,13 +195,10 @@ const WinRateTable: React.FC = () => {
         setSensitivity(20.0);
         break;
       case "mid":
-        setSensitivity(30.0);
-        break;
-      case "late":
         setSensitivity(40.0);
         break;
       default:
-        setSensitivity(30.0);
+        setSensitivity(20.0);
     }
   };
 
@@ -231,12 +228,11 @@ const WinRateTable: React.FC = () => {
                 <Select
                   style={{ width: 200 }}
                   placeholder="环境演化进度"
-                  defaultValue="mid"
+                  defaultValue="early"
                   onChange={handleEvolutionPhaseChange}
                 >
-                  <Select.Option value="early">前期</Select.Option>
-                  <Select.Option value="mid">中期</Select.Option>
-                  <Select.Option value="late">末期</Select.Option>
+                  <Select.Option value="early">娱乐</Select.Option>
+                  <Select.Option value="mid">竞技</Select.Option>
                 </Select>
                 <Select
                   style={{ width: 200 }}

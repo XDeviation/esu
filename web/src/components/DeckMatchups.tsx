@@ -10,12 +10,14 @@ import {
   Row,
   Col,
   Space,
+  Tooltip,
 } from "antd";
 import api from "../config/api";
 import { MatchType, BatchMatch } from "../types";
 import type { ColumnsType } from "antd/es/table";
 import BatchMatchModal from "./BatchMatchModal";
 import { submitBatchMatch } from "../utils/matchUtils";
+import { QuestionCircleOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
 
@@ -295,6 +297,9 @@ const DeckMatchups: React.FC = () => {
               <Title level={2} style={{ margin: 0 }}>
                 卡组对战统计
               </Title>
+              <Tooltip title="点击单元格快速提交对局记录">
+                <QuestionCircleOutlined style={{ fontSize: '20px', color: '#1890ff', cursor: 'help' }} />
+              </Tooltip>
               <Select
                 value={selectedEnvironment}
                 onChange={(value) => setSelectedEnvironment(value)}
