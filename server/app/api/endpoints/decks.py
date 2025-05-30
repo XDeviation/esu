@@ -34,7 +34,8 @@ async def create_deck(
     # 创建卡组
     deck_dict = deck.model_dump()
     deck_dict["id"] = deck_id
-    deck_dict["author_id"] = current_user.email
+    # 使用前端传来的author_id，而不是当前用户的邮箱
+    # deck_dict["author_id"] = current_user.email
 
     await db.decks.insert_one(deck_dict)
     return Deck(**deck_dict)

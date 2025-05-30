@@ -14,6 +14,7 @@ import {
 } from "antd";
 import api from "../config/api";
 import { useLocation } from "react-router-dom";
+import "./Statistics.css";
 
 const { Title } = Typography;
 
@@ -207,11 +208,11 @@ const Statistics: React.FC = () => {
                 </Title>
               </Row>
               <Row gutter={[16, 16]} justify="center">
-                <Col xs={8} sm={8} md={8} lg={8}>
+                <Col xs={24} sm={12} md={8}>
                   <Select
                     value={selectedEnvironment}
                     onChange={(value) => setSelectedEnvironment(value)}
-                    style={{ width: '100%' }}
+                    className="select-container"
                     loading={loading}
                     placeholder="请选择环境"
                   >
@@ -222,11 +223,11 @@ const Statistics: React.FC = () => {
                     ))}
                   </Select>
                 </Col>
-                <Col xs={8} sm={8} md={8} lg={8}>
+                <Col xs={24} sm={12} md={8}>
                   <Select
                     value={selectedMatchType}
                     onChange={(value) => setSelectedMatchType(value)}
-                    style={{ width: '100%' }}
+                    className="select-container"
                     loading={loading}
                     placeholder="请选择比赛类型"
                     allowClear
@@ -239,11 +240,11 @@ const Statistics: React.FC = () => {
                     ))}
                   </Select>
                 </Col>
-                <Col xs={8} sm={8} md={8} lg={8}>
+                <Col xs={24} sm={12} md={8}>
                   <Select
                     value={sortType}
                     onChange={(value) => setSortType(value)}
-                    style={{ width: '100%' }}
+                    className="select-container"
                     placeholder="排序方式"
                   >
                     <Select.Option value="total_matches_desc">

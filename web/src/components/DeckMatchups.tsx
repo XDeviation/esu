@@ -18,6 +18,7 @@ import type { ColumnsType } from "antd/es/table";
 import BatchMatchModal from "./BatchMatchModal";
 import { submitBatchMatch } from "../utils/matchUtils";
 import { QuestionCircleOutlined } from "@ant-design/icons";
+import "./DeckMatchups.css";
 
 const { Title } = Typography;
 
@@ -273,7 +274,7 @@ const DeckMatchups: React.FC = () => {
                   <Select
                     value={selectedEnvironment}
                     onChange={(value) => setSelectedEnvironment(value)}
-                    style={{ width: '100%' }}
+                    className="select-container"
                     loading={loading}
                     placeholder="请选择环境"
                   >
@@ -288,7 +289,7 @@ const DeckMatchups: React.FC = () => {
                   <Select
                     value={selectedMatchType}
                     onChange={(value) => setSelectedMatchType(value)}
-                    style={{ width: '100%' }}
+                    className="select-container"
                     loading={loading}
                     placeholder="请选择比赛类型"
                     allowClear
@@ -305,7 +306,7 @@ const DeckMatchups: React.FC = () => {
                   <Select
                     value={selectedHand}
                     onChange={(value) => setSelectedHand(value)}
-                    style={{ width: '100%' }}
+                    className="select-container"
                     placeholder="请选择先后手"
                   >
                     <Select.Option value="all">默认</Select.Option>
