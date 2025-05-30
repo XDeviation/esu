@@ -11,6 +11,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --mobile-breakpoint: 768px;
 }
 
 a {
@@ -64,5 +66,62 @@ button:focus-visible {
   }
   button {
     background-color: #f9f9f9;
+  }
+}
+
+/* 移动端适配 */
+@media screen and (max-width: 768px) {
+  html {
+    font-size: 14px;
+  }
+  
+  body {
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
+  }
+  
+  /* 防止移动端点击出现蓝色高亮 */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Dashboard移动端适配 */
+  .mobile-menu-button {
+    display: block !important;
+  }
+
+  .desktop-sider {
+    display: none !important;
+  }
+
+  /* 调整内容区域padding */
+  .ant-layout-content {
+    padding: 12px !important;
+  }
+
+  /* 调整表格在移动端的显示 */
+  .ant-table {
+    font-size: 14px;
+  }
+
+  .ant-table-thead > tr > th {
+    padding: 8px !important;
+  }
+
+  /* 用户信息和登出按钮移动端适配 */
+  .user-name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .logout-text {
+    display: none;
+  }
+
+  .ant-btn-text {
+    padding: 4px !important;
   }
 }

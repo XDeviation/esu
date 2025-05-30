@@ -16,6 +16,7 @@ class MatchTypeCreate(MatchTypeBase):
 class MatchType(MatchTypeBase):
     id: int
     users: List[str] = []  # 存储用户ID列表
+    creator_id: Optional[str] = None  # 创建者ID，可选字段
 
     class Config:
         from_attributes = True

@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Table, Button, message, Space, Popconfirm, Form } from "antd";
+import { Table, Button, message, Space, Popconfirm, Form, Row, Col } from "antd";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import api, { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
 import BatchMatchModal from "./BatchMatchModal";
 import { handleBatchSubmit as submitBatchMatch } from "../utils/matchResults";
 import { MatchType } from "../types";
+import type { TableProps } from 'antd';
 
 interface MatchResult {
   id: number;
@@ -174,12 +175,13 @@ const MatchResults: React.FC = () => {
     setBatchModalVisible(true);
   };
 
-  const columns = [
+  const columns: TableProps<MatchResult>['columns'] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
       width: 80,
+      responsive: ['lg'],
     },
     {
       title: "环境",
@@ -196,8 +198,9 @@ const MatchResults: React.FC = () => {
       key: "first_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? `${deck.name} (${deck.author_id})` : id;
+        return deck ? deck.name : id;
       },
+      responsive: ['md'],
     },
     {
       title: "后手卡组",
@@ -205,8 +208,9 @@ const MatchResults: React.FC = () => {
       key: "second_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? `${deck.name} (${deck.author_id})` : id;
+        return deck ? deck.name : id;
       },
+      responsive: ['md'],
     },
     {
       title: "胜利卡组",
@@ -214,7 +218,7 @@ const MatchResults: React.FC = () => {
       key: "winning_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? `${deck.name} (${deck.author_id})` : id;
+        return deck ? deck.name : id;
       },
     },
     {
@@ -223,7 +227,7 @@ const MatchResults: React.FC = () => {
       key: "losing_deck_id",
       render: (id: number) => {
         const deck = decks.find((d) => d.id === id);
-        return deck ? `${deck.name} (${deck.author_id})` : id;
+        return deck ? deck.name : id;
       },
     },
     {
@@ -234,13 +238,14 @@ const MatchResults: React.FC = () => {
         const matchType = matchTypes.find((mt) => mt.id === id);
         return matchType ? matchType.name : id;
       },
+      responsive: ['sm'],
     },
     {
       title: "操作",
       key: "action",
       width: 200,
       render: (_: unknown, record: MatchResult) => (
-        <Space>
+        <Space size="small">
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -264,17 +269,26 @@ const MatchResults: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={handleOpenBatchModal}>
-          添加战绩
-        </Button>
-      </div>
+    <div className="match-results-container">
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={24}>
+          <Button type="primary" onClick={handleOpenBatchModal}>
+            添加战绩
+          </Button>
+        </Col>
+      </Row>
       <Table
         columns={columns}
         dataSource={matchResults}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        pagination={{
+          responsive: true,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
       />
       <BatchMatchModal
         visible={batchModalVisible}

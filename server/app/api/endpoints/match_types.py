@@ -1,15 +1,18 @@
 import secrets
 import string
 from typing import List
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from ...db.mongodb import db
 from ...models.match_type import MatchType, MatchTypeCreate
+from ...models.user import UserRole
 from ..deps import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class JoinGroupRequest(BaseModel):
@@ -49,6 +52,7 @@ async def create_match_type(
     # 创建比赛类型
     match_type_dict = match_type.model_dump()
     match_type_dict["id"] = match_type_id
+    match_type_dict["creator_id"] = current_user.id  # 添加创建者ID
 
     # 如果是私有分组，生成邀请码
     if match_type_dict.get("is_private", False):
@@ -64,26 +68,48 @@ async def create_match_type(
 
 @router.get("/", response_model=List[MatchType])
 async def read_match_types(current_user: dict = Depends(get_current_user)):
-    # 获取所有公开的比赛类型（包括 is_private 为 false 或 null 的情况）
-    public_match_types = await db.match_types.find(
-        {
-            "$or": [
-                {"is_private": False},
-                {"is_private": None},
-                {"is_private": {"$exists": False}},
-            ]
-        }
-    ).to_list(length=None)
+    try:
+        # 如果是管理员，返回所有比赛类型
+        if current_user.role == UserRole.ADMIN:
+            all_match_types = await db.match_types.find().to_list(length=None)
+            # 确保每个记录都有 creator_id 字段
+            for mt in all_match_types:
+                if "creator_id" not in mt:
+                    mt["creator_id"] = None
+            return [MatchType(**mt) for mt in all_match_types]
 
-    # 获取用户所在的私有比赛类型
-    private_match_types = await db.match_types.find(
-        {"is_private": True, "users": current_user.id}
-    ).to_list(length=None)
+        # 非管理员用户只能看到公开的比赛类型和自己所在的私有比赛类型
+        # 获取所有公开的比赛类型（包括 is_private 为 false 或 null 的情况）
+        public_match_types = await db.match_types.find(
+            {
+                "$or": [
+                    {"is_private": False},
+                    {"is_private": None},
+                    {"is_private": {"$exists": False}},
+                ]
+            }
+        ).to_list(length=None)
 
-    # 合并结果
-    all_match_types = public_match_types + private_match_types
+        # 获取用户所在的私有比赛类型
+        private_match_types = await db.match_types.find(
+            {"is_private": True, "users": current_user.id}
+        ).to_list(length=None)
 
-    return [MatchType(**mt) for mt in all_match_types]
+        # 合并结果
+        all_match_types = public_match_types + private_match_types
+
+        # 确保每个记录都有 creator_id 字段
+        for mt in all_match_types:
+            if "creator_id" not in mt:
+                mt["creator_id"] = None
+
+        return [MatchType(**mt) for mt in all_match_types]
+    except Exception as e:
+        logger.error(f"获取比赛类型列表失败: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取比赛类型列表失败: {str(e)}"
+        )
 
 
 @router.get("/{match_type_id}", response_model=MatchType)
@@ -128,9 +154,22 @@ async def delete_match_type(
     match_type_id: int, current_user: dict = Depends(get_current_user)
 ):
     # 检查比赛类型是否存在
-    if not await db.match_types.find_one({"id": match_type_id}):
+    match_type = await db.match_types.find_one({"id": match_type_id})
+    if not match_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="比赛类型不存在"
+        )
+
+    # 检查权限
+    # 如果没有 creator_id，则只有管理员可以删除
+    if not match_type.get("creator_id"):
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="只有管理员可以删除此对局类型"
+            )
+    elif match_type.get("creator_id") != current_user.id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="您只能删除自己创建的对局类型"
         )
 
     # 检查是否有对局使用此比赛类型

@@ -8,7 +8,11 @@ import {
   message,
   Space,
   Popconfirm,
+  Alert,
+  Row,
+  Col,
 } from "antd";
+import type { TableProps } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
@@ -25,6 +29,7 @@ const Environments: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingEnvironment, setEditingEnvironment] =
     useState<Environment | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [form] = Form.useForm();
   const location = useLocation();
 
@@ -40,26 +45,48 @@ const Environments: React.FC = () => {
     }
   }, []);
 
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+
   // 监听路由变化
   useEffect(() => {
     if (location.pathname === "/environments") {
       fetchEnvironments();
+      checkAdminStatus();
     }
-  }, [location.pathname, fetchEnvironments]);
+  }, [location.pathname, fetchEnvironments, checkAdminStatus]);
 
   const handleCreate = () => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够创建环境。如有需要请联系管理员");
+      return;
+    }
     setEditingEnvironment(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record: Environment) => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够编辑环境。如有需要请联系管理员");
+      return;
+    }
     setEditingEnvironment(record);
     form.setFieldsValue(record);
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够删除环境。如有需要请联系管理员");
+      return;
+    }
     try {
       await api.delete(`${API_ENDPOINTS.ENVIRONMENTS}/${id}`);
       message.success("删除成功");
@@ -89,12 +116,13 @@ const Environments: React.FC = () => {
     }
   };
 
-  const columns = [
+  const columns: TableProps<Environment>['columns'] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
       width: 80,
+      responsive: ['xs'],
     },
     {
       title: "环境名称",
@@ -106,7 +134,7 @@ const Environments: React.FC = () => {
       key: "action",
       width: 200,
       render: (_: unknown, record: Environment) => (
-        <Space>
+        <Space size="small">
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -130,17 +158,26 @@ const Environments: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          创建环境
-        </Button>
-      </div>
+    <div className="environments-container">
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={24} md={24} lg={24}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            创建环境
+          </Button>
+        </Col>
+      </Row>
       <Table
         columns={columns}
         dataSource={environments}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        pagination={{
+          responsive: true,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
       />
       <Modal
         title={editingEnvironment ? "编辑环境" : "创建环境"}
@@ -148,6 +185,8 @@ const Environments: React.FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         destroyOnClose
+        width="90%"
+        style={{ maxWidth: '500px' }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
