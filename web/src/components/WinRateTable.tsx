@@ -10,7 +10,6 @@ import {
   Row,
   Col,
   Space,
-  Button,
 } from "antd";
 import api from "../config/api";
 import { useLocation } from "react-router-dom";
@@ -145,7 +144,7 @@ const WinRateTable: React.FC = () => {
       dataIndex: "deck_id",
       key: "deck_id",
       width: 100,
-      responsive: ['xs'],
+      responsive: ["xs"],
     },
     {
       title: "卡组名称",
@@ -208,7 +207,7 @@ const WinRateTable: React.FC = () => {
       <Card className="mb-6">
         <Row gutter={[16, 16]} justify="center">
           <Col xs={24} sm={24} md={24} lg={24}>
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
               <Row justify="center">
                 <Title level={2} style={{ margin: 0 }}>
                   梯度表
@@ -217,7 +216,7 @@ const WinRateTable: React.FC = () => {
               <Row gutter={[16, 16]} justify="center">
                 <Col xs={24} sm={12} md={8}>
                   <Select
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                     placeholder="选择环境"
                     allowClear
                     value={selectedEnvironment}
@@ -232,7 +231,7 @@ const WinRateTable: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={12} md={8}>
                   <Select
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                     placeholder="环境演化进度"
                     defaultValue="early"
                     onChange={handleEvolutionPhaseChange}
@@ -243,7 +242,7 @@ const WinRateTable: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={12} md={8}>
                   <Select
-                    style={{ width: '100%' }}
+                    style={{ width: "100%" }}
                     placeholder="选择比赛类型"
                     allowClear
                     value={selectedMatchType}
@@ -274,7 +273,7 @@ const WinRateTable: React.FC = () => {
               showQuickJumper: true,
               showTotal: (total) => `共 ${total} 条`,
             }}
-            scroll={{ x: 'max-content' }}
+            scroll={{ x: "max-content" }}
           />
         </Spin>
       </Card>
