@@ -18,7 +18,6 @@ import type { ColumnsType } from "antd/es/table";
 import BatchMatchModal from "./BatchMatchModal";
 import { submitBatchMatch } from "../utils/matchUtils";
 import { QuestionCircleOutlined } from "@ant-design/icons";
-import { useLocation } from "react-router-dom";
 import "./DeckMatchups.css";
 
 const { Title } = Typography;
