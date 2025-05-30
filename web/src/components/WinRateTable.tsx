@@ -15,6 +15,7 @@ import api from "../config/api";
 import { useLocation } from "react-router-dom";
 import { MatchType } from "../types";
 import type { ColumnsType } from "antd/es/table";
+import "./WinRateTable.css";
 
 const { Title } = Typography;
 
@@ -216,7 +217,7 @@ const WinRateTable: React.FC = () => {
               <Row gutter={[16, 16]} justify="center">
                 <Col xs={24} sm={12} md={8}>
                   <Select
-                    style={{ width: '100%' }}
+                    className="select-container"
                     placeholder="选择环境"
                     allowClear
                     value={selectedEnvironment}
@@ -231,7 +232,7 @@ const WinRateTable: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={12} md={8}>
                   <Select
-                    style={{ width: '100%' }}
+                    className="select-container"
                     placeholder="环境演化进度"
                     defaultValue="early"
                     onChange={handleEvolutionPhaseChange}
@@ -242,7 +243,7 @@ const WinRateTable: React.FC = () => {
                 </Col>
                 <Col xs={24} sm={12} md={8}>
                   <Select
-                    style={{ width: '100%' }}
+                    className="select-container"
                     placeholder="选择比赛类型"
                     allowClear
                     value={selectedMatchType}

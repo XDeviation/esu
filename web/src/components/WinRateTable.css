@@ -1,0 +1,9 @@
+.select-container {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .select-container {
+    width: 50%;
+  }
+} 

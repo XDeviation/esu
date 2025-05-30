@@ -43,9 +43,19 @@ const MatchResults: React.FC = () => {
   const [matchTypes, setMatchTypes] = useState<MatchType[]>([]);
   const [loading, setLoading] = useState(false);
   const [batchModalVisible, setBatchModalVisible] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [form] = Form.useForm();
   const [batchForm] = Form.useForm();
   const location = useLocation();
+
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
 
   const fetchMatchResults = useCallback(async () => {
     try {
@@ -100,6 +110,7 @@ const MatchResults: React.FC = () => {
       fetchEnvironments();
       fetchDecks();
       fetchMatchTypes();
+      checkAdminStatus();
     }
 
     // 检查URL参数
@@ -131,6 +142,7 @@ const MatchResults: React.FC = () => {
     fetchMatchTypes,
     location.search,
     batchForm,
+    checkAdminStatus,
   ]);
 
   const handleEdit = (record: MatchResult) => {
@@ -240,7 +252,7 @@ const MatchResults: React.FC = () => {
       },
       responsive: ['sm'],
     },
-    {
+    ...(isAdmin ? [{
       title: "操作",
       key: "action",
       width: 200,
@@ -265,7 +277,7 @@ const MatchResults: React.FC = () => {
           </Popconfirm>
         </Space>
       ),
-    },
+    }] : []),
   ];
 
   return (
