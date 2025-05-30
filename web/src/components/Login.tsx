@@ -12,6 +12,7 @@ import {
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import axios, { AxiosError } from "axios";
 import { API_ENDPOINTS } from "../config/api";
+import md5 from "md5";
 
 const { Title, Text } = Typography;
 
@@ -35,7 +36,7 @@ const Login: React.FC = () => {
       setLoading(true);
       const formData = new URLSearchParams();
       formData.append("username", values.username);
-      formData.append("password", values.password);
+      formData.append("password", md5(values.password).toUpperCase());
 
       const response = await axios.post(API_ENDPOINTS.LOGIN, formData, {
         headers: {
@@ -63,7 +64,11 @@ const Login: React.FC = () => {
   const onRegisterFinish = async (values: RegisterFormData) => {
     try {
       setLoading(true);
-      await axios.post(API_ENDPOINTS.REGISTER, values);
+      const registerData = {
+        ...values,
+        password: md5(values.password).toUpperCase(),
+      };
+      await axios.post(API_ENDPOINTS.REGISTER, registerData);
       message.success("注册成功！请登录");
       setActiveTab("login");
     } catch (error) {
