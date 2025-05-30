@@ -8,11 +8,10 @@ import {
   message,
   Space,
   Popconfirm,
-  Alert,
   Row,
   Col,
 } from "antd";
-import type { TableProps } from 'antd';
+import type { TableProps } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
@@ -116,13 +115,13 @@ const Environments: React.FC = () => {
     }
   };
 
-  const columns: TableProps<Environment>['columns'] = [
+  const columns: TableProps<Environment>["columns"] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
       width: 80,
-      responsive: ['xs'],
+      responsive: ["xs"],
     },
     {
       title: "环境名称",
@@ -171,7 +170,7 @@ const Environments: React.FC = () => {
         dataSource={environments}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 'max-content' }}
+        scroll={{ x: "max-content" }}
         pagination={{
           responsive: true,
           showSizeChanger: true,
@@ -186,7 +185,7 @@ const Environments: React.FC = () => {
         onCancel={() => setModalVisible(false)}
         destroyOnClose
         width="90%"
-        style={{ maxWidth: '500px' }}
+        style={{ maxWidth: "500px" }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
