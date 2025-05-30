@@ -16,6 +16,7 @@ export interface MatchType {
   is_private: boolean;
   invite_code?: string;
   users: string[];
+  creator_id: string;
 }
 
 export interface MatchResult {

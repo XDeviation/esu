@@ -43,6 +43,8 @@ const MatchTypes: React.FC = () => {
     null
   );
   const [users, setUsers] = useState<Record<string, User>>({});
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [form] = Form.useForm();
   const [joinForm] = Form.useForm();
   const location = useLocation();
@@ -89,6 +91,16 @@ const MatchTypes: React.FC = () => {
     }
   }, []);
 
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+      setCurrentUserId(response.data.user_id);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+
   // 监听比赛类型变化，更新用户信息
   useEffect(() => {
     if (matchTypes.length > 0) {
@@ -103,35 +115,68 @@ const MatchTypes: React.FC = () => {
   useEffect(() => {
     if (location.pathname === "/match-types") {
       fetchMatchTypes();
+      checkAdminStatus();
     }
-  }, [location.pathname, fetchMatchTypes]);
+  }, [location.pathname, fetchMatchTypes, checkAdminStatus]);
 
   const handleCreate = () => {
     setEditingMatchType(null);
     form.resetFields();
+    // 如果不是管理员，默认设置为私有类型
+    if (!isAdmin) {
+      form.setFieldsValue({ is_private: true });
+    }
     setModalVisible(true);
   };
 
   const handleEdit = (record: MatchType) => {
+    // 检查权限
+    if (!isAdmin && record.creator_id !== currentUserId) {
+      message.warning("您只能编辑自己创建的对局类型");
+      return;
+    }
     setEditingMatchType(record);
     form.setFieldsValue(record);
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
+    const matchType = matchTypes.find(mt => mt.id === id);
+    if (!matchType) return;
+
+    // 检查权限
+    if (!isAdmin && matchType.creator_id !== currentUserId) {
+      message.warning("您只能删除自己创建的对局类型");
+      return;
+    }
+
     try {
-      await api.delete(`${API_ENDPOINTS.MATCH_TYPES}/${id}`);
+      await api.delete(`${API_ENDPOINTS.MATCH_TYPES}${id}/`);
       message.success("删除成功");
       fetchMatchTypes();
-    } catch {
-      message.error("删除失败");
+    } catch (error: unknown) {
+      if (error instanceof AxiosError && error.response?.data?.detail) {
+        message.error(error.response.data.detail);
+      } else {
+        message.error("删除失败");
+      }
     }
   };
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      
+      // 如果不是管理员，强制设置为私有类型
+      if (!isAdmin) {
+        values.is_private = true;
+      }
+
       if (editingMatchType) {
+        // 如果不是管理员，只允许修改名称
+        if (!isAdmin) {
+          values.is_private = editingMatchType.is_private;
+        }
         await api.put(
           `${API_ENDPOINTS.MATCH_TYPES}/${editingMatchType.id}`,
           values
@@ -278,12 +323,7 @@ const MatchTypes: React.FC = () => {
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
             创建比赛类型
           </Button>
-          <Button
-            icon={<TeamOutlined />}
-            onClick={() => setJoinModalVisible(true)}
-          >
-            加入比赛类型
-          </Button>
+          <Button onClick={() => setJoinModalVisible(true)}>加入比赛类型</Button>
         </Space>
       </div>
       <Table
@@ -311,9 +351,15 @@ const MatchTypes: React.FC = () => {
             name="is_private"
             label="私有类型"
             valuePropName="checked"
-            initialValue={false}
+            tooltip={
+              !isAdmin
+                ? editingMatchType
+                  ? "普通用户不能修改对局类型的私有属性"
+                  : "普通用户只能创建私有类型"
+                : undefined
+            }
           >
-            <Switch checkedChildren="是" unCheckedChildren="否" />
+            <Switch disabled={!isAdmin} />
           </Form.Item>
         </Form>
       </Modal>
@@ -321,10 +367,7 @@ const MatchTypes: React.FC = () => {
         title="加入比赛类型"
         open={joinModalVisible}
         onOk={handleJoin}
-        onCancel={() => {
-          setJoinModalVisible(false);
-          joinForm.resetFields();
-        }}
+        onCancel={() => setJoinModalVisible(false)}
         destroyOnClose
       >
         <Form form={joinForm} layout="vertical">
@@ -333,7 +376,7 @@ const MatchTypes: React.FC = () => {
             label="邀请码"
             rules={[{ required: true, message: "请输入邀请码" }]}
           >
-            <Input placeholder="请输入比赛类型的邀请码" />
+            <Input />
           </Form.Item>
         </Form>
       </Modal>

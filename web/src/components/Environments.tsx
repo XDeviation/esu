@@ -8,6 +8,7 @@ import {
   message,
   Space,
   Popconfirm,
+  Alert,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
@@ -25,6 +26,7 @@ const Environments: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingEnvironment, setEditingEnvironment] =
     useState<Environment | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [form] = Form.useForm();
   const location = useLocation();
 
@@ -40,26 +42,48 @@ const Environments: React.FC = () => {
     }
   }, []);
 
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+
   // 监听路由变化
   useEffect(() => {
     if (location.pathname === "/environments") {
       fetchEnvironments();
+      checkAdminStatus();
     }
-  }, [location.pathname, fetchEnvironments]);
+  }, [location.pathname, fetchEnvironments, checkAdminStatus]);
 
   const handleCreate = () => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够创建环境。如有需要请联系管理员");
+      return;
+    }
     setEditingEnvironment(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record: Environment) => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够编辑环境。如有需要请联系管理员");
+      return;
+    }
     setEditingEnvironment(record);
     form.setFieldsValue(record);
     setModalVisible(true);
   };
 
   const handleDelete = async (id: number) => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够删除环境。如有需要请联系管理员");
+      return;
+    }
     try {
       await api.delete(`${API_ENDPOINTS.ENVIRONMENTS}/${id}`);
       message.success("删除成功");

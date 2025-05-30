@@ -11,8 +11,9 @@ import {
   Select,
   Card,
   Typography,
+  Descriptions,
 } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
@@ -45,8 +46,11 @@ const Decks: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [viewModalVisible, setViewModalVisible] = useState(false);
   const [editingDeck, setEditingDeck] = useState<Deck | null>(null);
+  const [viewingDeck, setViewingDeck] = useState<Deck | null>(null);
   const [selectedEnvironment, setSelectedEnvironment] = useState<number | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [form] = Form.useForm();
   const location = useLocation();
 
@@ -73,21 +77,39 @@ const Decks: React.FC = () => {
     }
   }, []);
 
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+
   // 监听路由变化
   useEffect(() => {
     if (location.pathname === "/decks") {
       fetchDecks();
       fetchEnvironments();
+      checkAdminStatus();
     }
-  }, [location.pathname, fetchDecks, fetchEnvironments]);
+  }, [location.pathname, fetchDecks, fetchEnvironments, checkAdminStatus]);
 
   const handleCreate = () => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够创建卡组。如有需要请联系管理员");
+      return;
+    }
     setEditingDeck(null);
     form.resetFields();
     setModalVisible(true);
   };
 
   const handleEdit = (record: Deck) => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够编辑卡组。如有需要请联系管理员");
+      return;
+    }
     setEditingDeck(record);
     form.setFieldsValue({
       ...record,
@@ -99,6 +121,10 @@ const Decks: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
+    if (!isAdmin) {
+      message.warning("只有管理员能够删除卡组。如有需要请联系管理员");
+      return;
+    }
     try {
       await api.delete(`${API_ENDPOINTS.DECKS}${id}/`);
       message.success("删除成功");
@@ -154,6 +180,11 @@ const Decks: React.FC = () => {
     }
   };
 
+  const handleView = (record: Deck) => {
+    setViewingDeck(record);
+    setViewModalVisible(true);
+  };
+
   const columns = [
     {
       title: "ID",
@@ -195,9 +226,16 @@ const Decks: React.FC = () => {
     {
       title: "操作",
       key: "action",
-      width: 200,
+      width: 280,
       render: (_: unknown, record: Deck) => (
         <Space>
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => handleView(record)}
+          >
+            查看
+          </Button>
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -307,6 +345,35 @@ const Decks: React.FC = () => {
             <TextArea rows={4} placeholder="请输入卡组描述" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="卡组详情"
+        open={viewModalVisible}
+        onCancel={() => setViewModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        {viewingDeck && (
+          <Descriptions bordered column={1}>
+            <Descriptions.Item label="卡组名称">{viewingDeck.name}</Descriptions.Item>
+            <Descriptions.Item label="环境">
+              {environments.find(env => env.id === viewingDeck.environment_id)?.name || viewingDeck.environment_id}
+            </Descriptions.Item>
+            <Descriptions.Item label="作者">{viewingDeck.author_id}</Descriptions.Item>
+            <Descriptions.Item label="卡组码">{viewingDeck.deck_code || "-"}</Descriptions.Item>
+            <Descriptions.Item label="描述">{viewingDeck.description || "-"}</Descriptions.Item>
+            <Descriptions.Item label="卡组构成">
+              {viewingDeck.composition ? (
+                <pre style={{ margin: 0, maxHeight: "300px", overflow: "auto" }}>
+                  {JSON.stringify(viewingDeck.composition, null, 2)}
+                </pre>
+              ) : (
+                "-"
+              )}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
       </Modal>
     </div>
   );

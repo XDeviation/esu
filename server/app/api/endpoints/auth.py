@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from ...core.config import config
 from ...core.security import create_access_token, get_password_hash, verify_password
 from ...db.mongodb import db
-from ...models.user import User, UserCreate
+from ...models.user import User, UserCreate, UserRole
 from ..deps import get_current_user, get_user
 
 router = APIRouter()
@@ -33,6 +33,11 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @router.get("/users/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/check-admin")
+async def check_admin(current_user: User = Depends(get_current_user)):
+    return {"is_admin": current_user.role == UserRole.ADMIN}
 
 
 @router.post("/register", response_model=User)

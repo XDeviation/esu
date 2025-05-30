@@ -1,5 +1,5 @@
 import React from "react";
-import { Layout, Menu, theme } from "antd";
+import { Layout, Menu, theme, Space, Button, Typography } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   EnvironmentOutlined,
@@ -9,9 +9,11 @@ import {
   LineChartOutlined,
   PieChartOutlined,
   TableOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 
 const { Header, Content, Sider } = Layout;
+const { Text } = Typography;
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +21,14 @@ const Dashboard: React.FC = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const menuItems = [
     {
@@ -64,12 +74,23 @@ const Dashboard: React.FC = () => {
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
           background: "#fff",
           padding: "0 24px",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
         }}
       >
         <h1 style={{ margin: 0, color: "#1890ff" }}>SVEC 战绩管理器</h1>
+        <Space>
+          <Text>{user.name || user.email}</Text>
+          <Button
+            type="text"
+            icon={<LogoutOutlined />}
+            onClick={handleLogout}
+          >
+            登出
+          </Button>
+        </Space>
       </Header>
       <Layout>
         <Sider width={200} style={{ background: colorBgContainer }}>
