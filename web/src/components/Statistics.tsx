@@ -198,58 +198,70 @@ const Statistics: React.FC = () => {
   return (
     <div className="p-6">
       <Card className="mb-6">
-        <Row justify="center">
-          <Col>
-            <Space size="large" align="center">
-              <Title level={2} style={{ margin: 0 }}>
-                战绩统计
-              </Title>
-              <Select
-                value={selectedEnvironment}
-                onChange={(value) => setSelectedEnvironment(value)}
-                style={{ width: 200 }}
-                loading={loading}
-                placeholder="请选择环境"
-              >
-                {environments.map((env) => (
-                  <Select.Option key={env.id} value={env.id.toString()}>
-                    {env.name}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Select
-                value={selectedMatchType}
-                onChange={(value) => setSelectedMatchType(value)}
-                style={{ width: 200 }}
-                loading={loading}
-                placeholder="请选择比赛类型"
-                allowClear
-              >
-                <Select.Option value="">全部</Select.Option>
-                {matchTypes.map((mt) => (
-                  <Select.Option key={mt.id} value={mt.id.toString()}>
-                    {mt.name}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Select
-                value={sortType}
-                onChange={(value) => setSortType(value)}
-                style={{ width: 150 }}
-                placeholder="排序方式"
-              >
-                <Select.Option value="total_matches_desc">
-                  总场数降序
-                </Select.Option>
-                <Select.Option value="win_rate_desc">胜率降序</Select.Option>
-              </Select>
-              {statistics && (
-                <Statistic
-                  title="总场次"
-                  value={totalStats.total}
-                  valueStyle={{ fontSize: "20px" }}
-                />
-              )}
+        <Row gutter={[16, 16]} justify="center">
+          <Col xs={24} sm={24} md={24} lg={24}>
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              <Row justify="center">
+                <Title level={2} style={{ margin: 0 }}>
+                  战绩统计
+                </Title>
+              </Row>
+              <Row gutter={[16, 16]} justify="center">
+                <Col xs={8} sm={8} md={8} lg={8}>
+                  <Select
+                    value={selectedEnvironment}
+                    onChange={(value) => setSelectedEnvironment(value)}
+                    style={{ width: '100%' }}
+                    loading={loading}
+                    placeholder="请选择环境"
+                  >
+                    {environments.map((env) => (
+                      <Select.Option key={env.id} value={env.id.toString()}>
+                        {env.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Col>
+                <Col xs={8} sm={8} md={8} lg={8}>
+                  <Select
+                    value={selectedMatchType}
+                    onChange={(value) => setSelectedMatchType(value)}
+                    style={{ width: '100%' }}
+                    loading={loading}
+                    placeholder="请选择比赛类型"
+                    allowClear
+                  >
+                    <Select.Option value="">全部</Select.Option>
+                    {matchTypes.map((mt) => (
+                      <Select.Option key={mt.id} value={mt.id.toString()}>
+                        {mt.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Col>
+                <Col xs={8} sm={8} md={8} lg={8}>
+                  <Select
+                    value={sortType}
+                    onChange={(value) => setSortType(value)}
+                    style={{ width: '100%' }}
+                    placeholder="排序方式"
+                  >
+                    <Select.Option value="total_matches_desc">
+                      总场数降序
+                    </Select.Option>
+                    <Select.Option value="win_rate_desc">胜率降序</Select.Option>
+                  </Select>
+                </Col>
+              </Row>
+              <Row justify="center">
+                <Col>
+                  <Statistic
+                    title="总场次"
+                    value={totalStats.total}
+                    valueStyle={{ fontSize: "20px" }}
+                  />
+                </Col>
+              </Row>
             </Space>
           </Col>
         </Row>
@@ -262,8 +274,13 @@ const Statistics: React.FC = () => {
               dataSource={getSortedStatistics()}
               columns={columns}
               rowKey="deck_id"
-              pagination={false}
-              scroll={{ x: "max-content" }}
+              pagination={{
+                responsive: true,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `共 ${total} 条`,
+              }}
+              scroll={{ x: 'max-content' }}
             />
           )}
         </Spin>

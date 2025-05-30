@@ -185,7 +185,8 @@ const DeckMatchups: React.FC = () => {
         dataIndex: "deck_name",
         key: "deck_name",
         fixed: "left" as const,
-        width: 200,
+        width: 100,
+        ellipsis: true,
       },
     ];
 
@@ -194,7 +195,8 @@ const DeckMatchups: React.FC = () => {
         title: deck.deck_name,
         dataIndex: deckId,
         key: deckId,
-        width: 150,
+        width: 100,
+        ellipsis: true,
         render: (
           stats: MatchupStats | null,
           record: Record<string, string | MatchupStats | null>
@@ -219,53 +221,15 @@ const DeckMatchups: React.FC = () => {
             >
               {stats ? (
                 selectedHand === "both" ? (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      padding: "0 8px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        flex: 1,
-                        borderRight: "1px solid #f0f0f0",
-                        paddingRight: "8px",
-                      }}
-                    >
-                      <div style={{ fontSize: "12px", color: "#666" }}>
-                        先手
-                      </div>
-                      <div>
-                        {stats.first_hand_total > 0
-                          ? (
-                              (stats.first_hand_wins / stats.first_hand_total) *
-                              100
-                            ).toFixed(1)
-                          : "0.0"}
-                        %
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#999" }}>
-                        {stats.first_hand_wins}/{stats.first_hand_total}
-                      </div>
+                  <div>
+                    <div style={{ fontSize: "12px", color: "#666" }}>
+                      先: {stats.first_hand_wins}/{stats.first_hand_total}
                     </div>
-                    <div style={{ flex: 1, paddingLeft: "8px" }}>
-                      <div style={{ fontSize: "12px", color: "#666" }}>
-                        后手
-                      </div>
-                      <div>
-                        {stats.second_hand_total > 0
-                          ? (
-                              (stats.second_hand_wins /
-                                stats.second_hand_total) *
-                              100
-                            ).toFixed(1)
-                          : "0.0"}
-                        %
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#999" }}>
-                        {stats.second_hand_wins}/{stats.second_hand_total}
-                      </div>
+                    <div style={{ fontSize: "12px", color: "#666" }}>
+                      后: {stats.second_hand_wins}/{stats.second_hand_total}
+                    </div>
+                    <div style={{ marginTop: "4px" }}>
+                      {stats.win_rate.toFixed(1)}%
                     </div>
                   </div>
                 ) : (
@@ -291,54 +255,66 @@ const DeckMatchups: React.FC = () => {
   return (
     <div className="p-6">
       <Card className="mb-6">
-        <Row justify="center">
-          <Col>
-            <Space size="large" align="center">
-              <Title level={2} style={{ margin: 0 }}>
-                卡组对战统计
-              </Title>
-              <Tooltip title="点击单元格快速提交对局记录">
-                <QuestionCircleOutlined style={{ fontSize: '20px', color: '#1890ff', cursor: 'help' }} />
-              </Tooltip>
-              <Select
-                value={selectedEnvironment}
-                onChange={(value) => setSelectedEnvironment(value)}
-                style={{ width: 200 }}
-                loading={loading}
-                placeholder="请选择环境"
-              >
-                {environments.map((env) => (
-                  <Select.Option key={env.id} value={env.id.toString()}>
-                    {env.name}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Select
-                value={selectedMatchType}
-                onChange={(value) => setSelectedMatchType(value)}
-                style={{ width: 200 }}
-                loading={loading}
-                placeholder="请选择比赛类型"
-                allowClear
-              >
-                <Select.Option value="">全部</Select.Option>
-                {matchTypes.map((mt) => (
-                  <Select.Option key={mt.id} value={mt.id.toString()}>
-                    {mt.name}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Select
-                value={selectedHand}
-                onChange={(value) => setSelectedHand(value)}
-                style={{ width: 120 }}
-                placeholder="请选择先后手"
-              >
-                <Select.Option value="all">默认</Select.Option>
-                <Select.Option value="both">显示先后手</Select.Option>
-                <Select.Option value="first">仅先手</Select.Option>
-                <Select.Option value="second">仅后手</Select.Option>
-              </Select>
+        <Row gutter={[16, 16]} justify="center">
+          <Col xs={24} sm={24} md={24} lg={24}>
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              <Row justify="center">
+                <Space align="center">
+                  <Title level={2} style={{ margin: 0 }}>
+                    卡组对战统计
+                  </Title>
+                  <Tooltip title="点击单元格快速提交对局记录">
+                    <QuestionCircleOutlined style={{ fontSize: '20px', color: '#1890ff', cursor: 'help' }} />
+                  </Tooltip>
+                </Space>
+              </Row>
+              <Row gutter={[16, 16]} justify="center">
+                <Col xs={24} sm={12} md={8}>
+                  <Select
+                    value={selectedEnvironment}
+                    onChange={(value) => setSelectedEnvironment(value)}
+                    style={{ width: '100%' }}
+                    loading={loading}
+                    placeholder="请选择环境"
+                  >
+                    {environments.map((env) => (
+                      <Select.Option key={env.id} value={env.id.toString()}>
+                        {env.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Col>
+                <Col xs={24} sm={12} md={8}>
+                  <Select
+                    value={selectedMatchType}
+                    onChange={(value) => setSelectedMatchType(value)}
+                    style={{ width: '100%' }}
+                    loading={loading}
+                    placeholder="请选择比赛类型"
+                    allowClear
+                  >
+                    <Select.Option value="">全部</Select.Option>
+                    {matchTypes.map((mt) => (
+                      <Select.Option key={mt.id} value={mt.id.toString()}>
+                        {mt.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Col>
+                <Col xs={24} sm={12} md={8}>
+                  <Select
+                    value={selectedHand}
+                    onChange={(value) => setSelectedHand(value)}
+                    style={{ width: '100%' }}
+                    placeholder="请选择先后手"
+                  >
+                    <Select.Option value="all">默认</Select.Option>
+                    <Select.Option value="both">显示先后手</Select.Option>
+                    <Select.Option value="first">仅先手</Select.Option>
+                    <Select.Option value="second">仅后手</Select.Option>
+                  </Select>
+                </Col>
+              </Row>
             </Space>
           </Col>
         </Row>
@@ -351,18 +327,18 @@ const DeckMatchups: React.FC = () => {
               dataSource={getMatchupData()}
               columns={getMatchupColumns()}
               pagination={false}
-              scroll={{ x: "max-content" }}
+              scroll={{ x: 'max-content' }}
+              size="small"
             />
           )}
         </Spin>
       </Card>
+
       <BatchMatchModal
         visible={batchModalVisible}
-        onCancel={() => {
-          setBatchModalVisible(false);
-          setBatchModalInitialValues(undefined);
-        }}
+        onCancel={() => setBatchModalVisible(false)}
         onSubmit={handleBatchSubmit}
+        initialValues={batchModalInitialValues}
         environments={environments}
         decks={Object.entries(statistics?.matchup_statistics || {}).map(
           ([id, deck]) => ({
@@ -373,7 +349,6 @@ const DeckMatchups: React.FC = () => {
           })
         )}
         matchTypes={matchTypes}
-        initialValues={batchModalInitialValues}
       />
     </div>
   );

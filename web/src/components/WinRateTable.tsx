@@ -145,6 +145,7 @@ const WinRateTable: React.FC = () => {
       dataIndex: "deck_id",
       key: "deck_id",
       width: 100,
+      responsive: ['xs'],
     },
     {
       title: "卡组名称",
@@ -205,57 +206,58 @@ const WinRateTable: React.FC = () => {
   return (
     <div className="p-6">
       <Card className="mb-6">
-        <Row justify="center">
-          <Col>
-            <Space size="large" align="center">
-              <Title level={2} style={{ margin: 0 }}>
-                梯度表
-              </Title>
-              <Space>
-                <Select
-                  style={{ width: 200 }}
-                  placeholder="选择环境"
-                  allowClear
-                  value={selectedEnvironment}
-                  onChange={(value) => setSelectedEnvironment(value)}
-                >
-                  {environments.map((env) => (
-                    <Select.Option key={env.id} value={env.id}>
-                      {env.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-                <Select
-                  style={{ width: 200 }}
-                  placeholder="环境演化进度"
-                  defaultValue="early"
-                  onChange={handleEvolutionPhaseChange}
-                >
-                  <Select.Option value="early">娱乐</Select.Option>
-                  <Select.Option value="mid">竞技</Select.Option>
-                </Select>
-                <Select
-                  style={{ width: 200 }}
-                  placeholder="选择比赛类型"
-                  allowClear
-                  value={selectedMatchType}
-                  onChange={(value) => setSelectedMatchType(value)}
-                >
-                  <Select.Option value="">全部</Select.Option>
-                  {matchTypes.map((mt) => (
-                    <Select.Option key={mt.id} value={mt.id.toString()}>
-                      {mt.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-                <Button
-                  type="primary"
-                  onClick={fetchWinRates}
-                  loading={loading}
-                >
-                  {loading ? "加载中..." : "刷新"}
-                </Button>
-              </Space>
+        <Row gutter={[16, 16]} justify="center">
+          <Col xs={24} sm={24} md={24} lg={24}>
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              <Row justify="center">
+                <Title level={2} style={{ margin: 0 }}>
+                  梯度表
+                </Title>
+              </Row>
+              <Row gutter={[16, 16]} justify="center">
+                <Col xs={24} sm={12} md={8}>
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="选择环境"
+                    allowClear
+                    value={selectedEnvironment}
+                    onChange={(value) => setSelectedEnvironment(value)}
+                  >
+                    {environments.map((env) => (
+                      <Select.Option key={env.id} value={env.id}>
+                        {env.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Col>
+                <Col xs={24} sm={12} md={8}>
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="环境演化进度"
+                    defaultValue="early"
+                    onChange={handleEvolutionPhaseChange}
+                  >
+                    <Select.Option value="early">娱乐</Select.Option>
+                    <Select.Option value="mid">竞技</Select.Option>
+                  </Select>
+                </Col>
+                <Col xs={24} sm={12} md={8}>
+                  <Select
+                    style={{ width: '100%' }}
+                    placeholder="选择比赛类型"
+                    allowClear
+                    value={selectedMatchType}
+                    onChange={(value) => setSelectedMatchType(value)}
+                  >
+                    <Select.Option value="">全部</Select.Option>
+                    {matchTypes.map((mt) => (
+                      <Select.Option key={mt.id} value={mt.id.toString()}>
+                        {mt.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Col>
+              </Row>
             </Space>
           </Col>
         </Row>
@@ -266,8 +268,13 @@ const WinRateTable: React.FC = () => {
           <Table
             dataSource={dataSource}
             columns={columns}
-            pagination={false}
-            scroll={{ x: "max-content" }}
+            pagination={{
+              responsive: true,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 条`,
+            }}
+            scroll={{ x: 'max-content' }}
           />
         </Spin>
       </Card>

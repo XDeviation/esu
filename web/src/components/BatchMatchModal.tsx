@@ -153,7 +153,7 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="first_deck_id"
               label="卡组1"
@@ -162,13 +162,13 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
               <Select>
                 {getFilteredDecks().map((deck) => (
                   <Select.Option key={deck.id} value={deck.id}>
-                    {deck.name} ({deck.author_id})
+                    {deck.name}
                   </Select.Option>
                 ))}
               </Select>
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col xs={24} sm={12}>
             <Form.Item
               name="second_deck_id"
               label="卡组2"
@@ -177,7 +177,7 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
               <Select>
                 {getFilteredDecks().map((deck) => (
                   <Select.Option key={deck.id} value={deck.id}>
-                    {deck.name} ({deck.author_id})
+                    {deck.name}
                   </Select.Option>
                 ))}
               </Select>
@@ -228,10 +228,10 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
                       const firstDeck = decks.find((d) => d.id === firstDeckId);
                       const secondDeck = decks.find((d) => d.id === secondDeckId);
                       const firstDeckName = firstDeck
-                        ? `${firstDeck.name} (${firstDeck.author_id})`
+                        ? firstDeck.name
                         : "卡组1";
                       const secondDeckName = secondDeck
-                        ? `${secondDeck.name} (${secondDeck.author_id})`
+                        ? secondDeck.name
                         : "卡组2";
                       const ignoreFirstPlayer = form.getFieldValue("ignore_first_player");
 
@@ -271,8 +271,8 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
                                     noStyle
                                   >
                                     <Radio.Group>
-                                      <Radio value="first">{firstDeckName}</Radio>
-                                      <Radio value="second">{secondDeckName}</Radio>
+                                      <Radio value="first" style={{ whiteSpace: 'nowrap' }}>{firstDeckName}</Radio>
+                                      <Radio value="second" style={{ whiteSpace: 'nowrap' }}>{secondDeckName}</Radio>
                                     </Radio.Group>
                                   </Form.Item>
                                 </Col>
@@ -295,8 +295,8 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
                                 noStyle
                               >
                                 <Radio.Group>
-                                  <Radio value="first">{firstDeckName}</Radio>
-                                  <Radio value="second">{secondDeckName}</Radio>
+                                  <Radio value="first" style={{ whiteSpace: 'nowrap' }}>{firstDeckName}</Radio>
+                                  <Radio value="second" style={{ whiteSpace: 'nowrap' }}>{secondDeckName}</Radio>
                                 </Radio.Group>
                               </Form.Item>
                             </Col>

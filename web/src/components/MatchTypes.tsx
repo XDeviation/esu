@@ -12,6 +12,8 @@ import {
   Typography,
   Tag,
   Tooltip,
+  Row,
+  Col,
 } from "antd";
 import {
   PlusOutlined,
@@ -25,6 +27,7 @@ import { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
 import { MatchType } from "../types";
 import { AxiosError } from "axios";
+import type { TableProps } from 'antd';
 
 const { Text } = Typography;
 
@@ -245,12 +248,13 @@ const MatchTypes: React.FC = () => {
     );
   };
 
-  const columns = [
+  const columns: TableProps<MatchType>['columns'] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
       width: 80,
+      responsive: ['xs'],
     },
     {
       title: "比赛类型名称",
@@ -269,6 +273,7 @@ const MatchTypes: React.FC = () => {
       title: "邀请码",
       key: "invite_code",
       width: 200,
+      responsive: ['md'],
       render: (_: unknown, record: MatchType) =>
         record.is_private && record.invite_code ? (
           <Space>
@@ -285,6 +290,7 @@ const MatchTypes: React.FC = () => {
       title: "成员",
       key: "users",
       width: 300,
+      responsive: ['lg'],
       render: (_: unknown, record: MatchType) =>
         record.is_private ? renderUserList(record.users) : null,
     },
@@ -293,7 +299,7 @@ const MatchTypes: React.FC = () => {
       key: "action",
       width: 200,
       render: (_: unknown, record: MatchType) => (
-        <Space>
+        <Space size="small">
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -317,20 +323,31 @@ const MatchTypes: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            创建比赛类型
-          </Button>
-          <Button onClick={() => setJoinModalVisible(true)}>加入比赛类型</Button>
-        </Space>
-      </div>
+    <div className="match-types-container">
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={24}>
+          <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              创建比赛类型
+            </Button>
+            <Button onClick={() => setJoinModalVisible(true)}>
+              加入比赛类型
+            </Button>
+          </Space>
+        </Col>
+      </Row>
       <Table
         columns={columns}
         dataSource={matchTypes}
         rowKey="id"
         loading={loading}
+        scroll={{ x: 'max-content' }}
+        pagination={{
+          responsive: true,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条`,
+        }}
       />
       <Modal
         title={editingMatchType ? "编辑比赛类型" : "创建比赛类型"}
@@ -338,6 +355,8 @@ const MatchTypes: React.FC = () => {
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
         destroyOnClose
+        width="90%"
+        style={{ maxWidth: '500px' }}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -369,6 +388,8 @@ const MatchTypes: React.FC = () => {
         onOk={handleJoin}
         onCancel={() => setJoinModalVisible(false)}
         destroyOnClose
+        width="90%"
+        style={{ maxWidth: '500px' }}
       >
         <Form form={joinForm} layout="vertical">
           <Form.Item
