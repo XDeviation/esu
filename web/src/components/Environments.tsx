@@ -5,11 +5,11 @@ import {
   Modal,
   Form,
   Input,
-  message,
   Space,
   Popconfirm,
   Row,
   Col,
+  App,
 } from "antd";
 import type { TableProps } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
@@ -31,6 +31,7 @@ const Environments: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [form] = Form.useForm();
   const location = useLocation();
+  const { message } = App.useApp();
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -42,7 +43,7 @@ const Environments: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   const checkAdminStatus = useCallback(async () => {
     try {

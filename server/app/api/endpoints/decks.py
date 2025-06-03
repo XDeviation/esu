@@ -74,12 +74,6 @@ async def update_deck(
     if not existing:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
 
-    # 检查权限
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="没有权限修改此卡组"
-        )
-
     # 检查环境是否存在
     if not await db.environments.find_one({"id": deck.environment_id}):
         raise HTTPException(
@@ -99,13 +93,6 @@ async def delete_deck(deck_id: int, current_user: dict = Depends(get_current_adm
     deck = await db.decks.find_one({"id": deck_id})
     if not deck:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="卡组不存在")
-
-    # 检查权限
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="只有管理员才能执行此操作"
-        )
 
     # 删除所有相关的对局记录
     await db.match_results.delete_many(

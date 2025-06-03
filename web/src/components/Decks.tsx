@@ -5,7 +5,6 @@ import {
   Modal,
   Form,
   Input,
-  message,
   Space,
   Popconfirm,
   Select,
@@ -13,6 +12,7 @@ import {
   Col,
   Typography,
   Descriptions,
+  App,
 } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CopyOutlined } from "@ant-design/icons";
 import api from "../config/api";
@@ -53,8 +53,10 @@ const Decks: React.FC = () => {
   const [viewingDeck, setViewingDeck] = useState<Deck | null>(null);
   const [selectedEnvironment, setSelectedEnvironment] = useState<number | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
   const [form] = Form.useForm();
   const location = useLocation();
+  const { message } = App.useApp();
 
   const fetchDecks = useCallback(async () => {
     try {
@@ -67,7 +69,7 @@ const Decks: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -77,14 +79,16 @@ const Decks: React.FC = () => {
       console.error("获取环境列表失败:", error);
       message.error("获取环境列表失败");
     }
-  }, []);
+  }, [message]);
 
   const checkAdminStatus = useCallback(async () => {
     try {
       const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
       setIsAdmin(response.data.is_admin);
+      setIsModerator(response.data.is_moderator);
     } catch {
       setIsAdmin(false);
+      setIsModerator(false);
     }
   }, []);
 
@@ -98,8 +102,8 @@ const Decks: React.FC = () => {
   }, [location.pathname, fetchDecks, fetchEnvironments, checkAdminStatus]);
 
   const handleCreate = () => {
-    if (!isAdmin) {
-      message.warning("只有管理员能够创建卡组。如有需要请联系管理员");
+    if (!isModerator) {
+      message.warning("只有版主及以上权限能够创建卡组。如有需要请联系版主或管理员");
       return;
     }
     setEditingDeck(null);
@@ -108,8 +112,8 @@ const Decks: React.FC = () => {
   };
 
   const handleEdit = (record: Deck) => {
-    if (!isAdmin) {
-      message.warning("只有管理员能够编辑卡组。如有需要请联系管理员");
+    if (!isModerator) {
+      message.warning("只有版主及以上权限能够编辑卡组。如有需要请联系版主或管理员");
       return;
     }
     setEditingDeck(record);
@@ -248,9 +252,11 @@ const Decks: React.FC = () => {
           </Button>
           <Popconfirm
             title="确定要删除这个卡组吗？"
+            description="删除后将无法恢复，且相关的对局记录也会被删除。"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
+            okButtonProps={{ danger: true }}
           >
             <Button type="link" danger icon={<DeleteOutlined />}>
               删除
@@ -370,7 +376,11 @@ const Decks: React.FC = () => {
         footer={null}
         width="90%"
         style={{ maxWidth: '1000px' }}
-        bodyStyle={{ padding: '24px' }}
+        styles={{
+          body: {
+            padding: '24px'
+          }
+        }}
       >
         {viewingDeck && (
           <Descriptions 

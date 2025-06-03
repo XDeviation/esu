@@ -5,7 +5,6 @@ import {
   Modal,
   Form,
   Input,
-  message,
   Space,
   Popconfirm,
   Switch,
@@ -14,6 +13,7 @@ import {
   Tooltip,
   Row,
   Col,
+  App,
 } from "antd";
 import {
   PlusOutlined,
@@ -51,6 +51,7 @@ const MatchTypes: React.FC = () => {
   const [form] = Form.useForm();
   const [joinForm] = Form.useForm();
   const location = useLocation();
+  const { message } = App.useApp();
 
   // 获取用户信息
   const fetchUsers = useCallback(
@@ -92,7 +93,7 @@ const MatchTypes: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   const checkAdminStatus = useCallback(async () => {
     try {

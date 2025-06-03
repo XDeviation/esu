@@ -37,7 +37,11 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 
 @router.get("/check-admin")
 async def check_admin(current_user: User = Depends(get_current_user)):
-    return {"is_admin": current_user.role == UserRole.ADMIN}
+    return {
+        "is_admin": current_user.role == UserRole.ADMIN,
+        "is_moderator": current_user.role in [UserRole.ADMIN, UserRole.MODERATOR],
+        "user_id": current_user.id
+    }
 
 
 @router.post("/register", response_model=User)
