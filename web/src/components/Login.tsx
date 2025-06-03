@@ -4,10 +4,10 @@ import {
   Card,
   Form,
   Input,
-  message,
   Tabs,
   Typography,
   Space,
+  App,
 } from "antd";
 import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import axios, { AxiosError } from "axios";
@@ -30,6 +30,7 @@ interface RegisterFormData {
 const Login: React.FC = () => {
   const [activeTab, setActiveTab] = useState("login");
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
 
   const onLoginFinish = async (values: LoginFormData) => {
     try {
@@ -54,8 +55,19 @@ const Login: React.FC = () => {
       );
       message.success("登录成功！");
       window.location.href = "/";
-    } catch {
-      message.error("登录失败，请检查用户名和密码！");
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        const status = error.response?.status;
+        if (status === 401) {
+          message.error("密码错误，请重新输入！");
+        } else if (status === 404) {
+          message.error("该邮箱未注册，请先注册！");
+        } else {
+          message.error("登录失败，请稍后重试！");
+        }
+      } else {
+        message.error("登录失败，请稍后重试！");
+      }
     } finally {
       setLoading(false);
     }
