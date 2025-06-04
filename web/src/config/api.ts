@@ -45,6 +45,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const token = localStorage.getItem("token");
+      if (token === "guest") {
+        // 如果是游客，不跳转到登录页
+        return Promise.reject(error);
+      }
       // 清除 token 并跳转到登录页
       localStorage.removeItem("token");
       window.location.href = "/login";

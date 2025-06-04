@@ -7,7 +7,8 @@ from pydantic import BaseModel
 from ...db.mongodb import db
 from ...models.deck import Deck
 from ...models.match_result import MatchResult
-from ..deps import get_current_user
+from ...models.user import UserRole
+from ..deps import get_current_user_or_guest
 
 router = APIRouter()
 
@@ -52,7 +53,7 @@ class MatchupStatisticsResponse(BaseModel):
 
 @router.get("/environments/{environment_id}/statistics")
 async def get_environment_statistics(
-    environment_id: int, current_user: dict = Depends(get_current_user)
+    environment_id: int, current_user: dict = Depends(get_current_user_or_guest)
 ):
     """
     获取特定环境下的所有卡组战绩统计
@@ -121,7 +122,7 @@ async def get_deck_matchups(
     environment_id: int,
     match_type_id: Optional[int] = None,
     hand: Optional[str] = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user_or_guest),
 ):
     """
     获取特定环境下所有卡组之间的相互胜率
@@ -146,6 +147,10 @@ async def get_deck_matchups(
 
             # 如果是私有比赛类型，检查用户是否有权限访问
             if match_type.get("is_private", False):
+                if current_user.role == UserRole.GUEST:
+                    raise HTTPException(
+                        status_code=403, detail="游客无权访问该比赛类型的统计数据"
+                    )
                 if current_user.id not in match_type.get("users", []):
                     raise HTTPException(
                         status_code=403, detail="无权访问该比赛类型的统计数据"
@@ -254,7 +259,7 @@ async def get_deck_matchups(
 async def get_statistics(
     environment_id: int,
     match_type_id: Optional[int] = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_user_or_guest),
 ):
     try:
         # 获取环境信息
@@ -275,6 +280,10 @@ async def get_statistics(
 
             # 如果是私有比赛类型，检查用户是否有权限访问
             if match_type.get("is_private", False):
+                if current_user.role == UserRole.GUEST:
+                    raise HTTPException(
+                        status_code=403, detail="游客无权访问该比赛类型的统计数据"
+                    )
                 if current_user.id not in match_type.get("users", []):
                     raise HTTPException(
                         status_code=403, detail="无权访问该比赛类型的统计数据"

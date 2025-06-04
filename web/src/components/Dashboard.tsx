@@ -12,6 +12,8 @@ import {
   LogoutOutlined,
   MenuOutlined,
   UserOutlined,
+  LoginOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 
 const { Header, Content, Sider } = Layout;
@@ -33,6 +35,9 @@ const Dashboard: React.FC = () => {
   };
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+  console.log("Current user:", user);
+  const isGuest = user.name === "游客" || user.role === "guest";
+  console.log("Is guest:", isGuest);
 
   const menuItems = [
     {
@@ -113,20 +118,53 @@ const Dashboard: React.FC = () => {
             <UserOutlined />
             <span className="user-name">{user.name || user.email}</span>
           </Text>
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-            style={{ 
-              padding: '4px 8px',
-              height: 'auto',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <span className="logout-text">登出</span>
-          </Button>
+          {isGuest ? (
+            <>
+              <Button
+                type="primary"
+                icon={<UserAddOutlined />}
+                onClick={() => window.location.href = "/login?tab=register"}
+                style={{ 
+                  padding: '4px 8px',
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span className="register-text">注册</span>
+              </Button>
+              <Button
+                type="default"
+                icon={<LoginOutlined />}
+                onClick={() => window.location.href = "/login"}
+                style={{ 
+                  padding: '4px 8px',
+                  height: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span className="login-text">登录</span>
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="text"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              style={{ 
+                padding: '4px 8px',
+                height: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span className="logout-text">登出</span>
+            </Button>
+          )}
         </Space>
       </Header>
       <Layout>

@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from ...db.mongodb import db
 from ...models.match_type import MatchType, MatchTypeCreate
 from ...models.user import UserRole
-from ..deps import get_current_user
+from ..deps import get_current_user, get_current_user_or_guest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ async def create_match_type(
 
 
 @router.get("/", response_model=List[MatchType])
-async def read_match_types(current_user: dict = Depends(get_current_user)):
+async def read_match_types(current_user: dict = Depends(get_current_user_or_guest)):
     try:
         # 如果是管理员，返回所有比赛类型
         if current_user.role == UserRole.ADMIN:
@@ -78,7 +78,28 @@ async def read_match_types(current_user: dict = Depends(get_current_user)):
                     mt["creator_id"] = None
             return [MatchType(**mt) for mt in all_match_types]
 
-        # 非管理员用户只能看到公开的比赛类型和自己所在的私有比赛类型
+        # 如果是游客，只返回公开的比赛类型
+        if current_user.role == UserRole.GUEST:
+            public_match_types = await db.match_types.find(
+                {
+                    "$or": [
+                        {"is_private": False},
+                        {"is_private": None},
+                        {"is_private": {"$exists": False}},
+                    ]
+                }
+            ).to_list(length=None)
+            
+            # 确保每个记录都有 creator_id 字段
+            for mt in public_match_types:
+                if "creator_id" not in mt:
+                    mt["creator_id"] = None
+                # 对于游客，不返回私有信息
+                mt["users"] = []
+                mt["invite_code"] = None
+            return [MatchType(**mt) for mt in public_match_types]
+
+        # 普通用户可以看到公开的比赛类型和自己所在的私有比赛类型
         # 获取所有公开的比赛类型（包括 is_private 为 false 或 null 的情况）
         public_match_types = await db.match_types.find(
             {
@@ -92,7 +113,7 @@ async def read_match_types(current_user: dict = Depends(get_current_user)):
 
         # 获取用户所在的私有比赛类型
         private_match_types = await db.match_types.find(
-            {"is_private": True, "users": current_user.id}
+            {"is_private": True, "users": str(current_user.id)}
         ).to_list(length=None)
 
         # 合并结果
@@ -113,12 +134,34 @@ async def read_match_types(current_user: dict = Depends(get_current_user)):
 
 
 @router.get("/{match_type_id}", response_model=MatchType)
-async def read_match_type(match_type_id: int):
+async def read_match_type(
+    match_type_id: int,
+    current_user: dict = Depends(get_current_user_or_guest)
+):
     match_type = await db.match_types.find_one({"id": match_type_id})
     if not match_type:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="比赛类型不存在"
         )
+    
+    # 如果是私有比赛类型，检查权限
+    if match_type.get("is_private", False):
+        # 管理员可以查看所有比赛类型
+        if current_user.role == UserRole.ADMIN:
+            return MatchType(**match_type)
+        
+        # 检查用户是否在比赛类型的用户列表中
+        if current_user.role != UserRole.GUEST and current_user.id not in match_type.get("users", []):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="无权访问此比赛类型"
+            )
+    
+    # 对于游客，不返回私有信息
+    if current_user.role == UserRole.GUEST:
+        match_type["users"] = []
+        match_type["invite_code"] = None
+    
     return MatchType(**match_type)
 
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Button,
   Card,
@@ -13,6 +13,7 @@ import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import axios, { AxiosError } from "axios";
 import { API_ENDPOINTS } from "../config/api";
 import md5 from "md5";
+import { useSearchParams } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
@@ -28,9 +29,17 @@ interface RegisterFormData {
 }
 
 const Login: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("login");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "login");
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const onLoginFinish = async (values: LoginFormData) => {
     try {
@@ -51,6 +60,7 @@ const Login: React.FC = () => {
         JSON.stringify({
           email: values.username,
           name: response.data.name || values.username,
+          role: response.data.role || "player"
         })
       );
       message.success("登录成功！");
@@ -168,6 +178,27 @@ const Login: React.FC = () => {
                         size="large"
                       >
                         登录
+                      </Button>
+                    </Form.Item>
+                    <Form.Item>
+                      <Button
+                        type="link"
+                        block
+                        onClick={() => {
+                          localStorage.setItem("token", "guest");
+                          localStorage.setItem(
+                            "user",
+                            JSON.stringify({
+                              email: "guest@example.com",
+                              name: "游客",
+                              role: "guest"
+                            })
+                          );
+                          message.success("已进入游客模式！");
+                          window.location.href = "/";
+                        }}
+                      >
+                        以游客身份访问
                       </Button>
                     </Form.Item>
                   </Form>

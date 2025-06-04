@@ -7,7 +7,7 @@ from ...core.config import config
 from ...core.security import create_access_token, get_password_hash, verify_password
 from ...db.mongodb import db
 from ...models.user import User, UserCreate, UserRole
-from ..deps import get_current_user, get_user
+from ..deps import get_current_user, get_user, get_current_user_or_guest
 
 router = APIRouter()
 
@@ -27,7 +27,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "name": user.name,
+        "role": user.role
+    }
 
 
 @router.get("/users/me", response_model=User)
@@ -36,11 +41,12 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/check-admin")
-async def check_admin(current_user: User = Depends(get_current_user)):
+async def check_admin(current_user: User = Depends(get_current_user_or_guest)):
     return {
         "is_admin": current_user.role == UserRole.ADMIN,
         "is_moderator": current_user.role in [UserRole.ADMIN, UserRole.MODERATOR],
-        "user_id": current_user.id
+        "user_id": current_user.id,
+        "is_guest": current_user.role == UserRole.GUEST
     }
 
 

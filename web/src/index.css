@@ -117,11 +117,15 @@ button:focus-visible {
     white-space: nowrap;
   }
 
-  .logout-text {
+  .logout-text,
+  .login-text,
+  .register-text {
     display: none;
   }
 
-  .ant-btn-text {
+  .ant-btn-text,
+  .ant-btn-primary,
+  .ant-btn-default {
     padding: 4px !important;
   }
 }

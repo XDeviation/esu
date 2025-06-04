@@ -9,6 +9,7 @@ class UserRole(str, Enum):
     ADMIN = "admin"  # 超级管理员
     MODERATOR = "moderator"  # 版主/管理员
     PLAYER = "player"  # 普通玩家
+    GUEST = "guest"  # 游客
 
 
 class UserBase(BaseModel):
@@ -30,5 +31,8 @@ class User(UserBase):
         from_attributes = True
 
 
-class UserInDB(User):
-    hashed_password: str
+class UserInDB(UserBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    hashed_password: Optional[str] = None  # 游客用户可能没有密码
