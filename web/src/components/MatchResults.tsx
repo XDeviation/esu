@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Table, Button, message, Space, Popconfirm, Form, Row, Col } from "antd";
+import { Table, Button, message, Space, Popconfirm, Form, Row, Col, Select } from "antd";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import api, { API_ENDPOINTS } from "../config/api";
 import { useLocation } from "react-router-dom";
@@ -47,6 +47,8 @@ const MatchResults: React.FC = () => {
   const [form] = Form.useForm();
   const [batchForm] = Form.useForm();
   const location = useLocation();
+  const [selectedEnvironment, setSelectedEnvironment] = useState<number | null>(null);
+  const [selectedMatchType, setSelectedMatchType] = useState<number | null>(null);
 
   const checkAdminStatus = useCallback(async () => {
     try {
@@ -60,7 +62,14 @@ const MatchResults: React.FC = () => {
   const fetchMatchResults = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get(API_ENDPOINTS.MATCH_RESULTS);
+      const params = new URLSearchParams();
+      if (selectedEnvironment) {
+        params.append('environment_id', selectedEnvironment.toString());
+      }
+      if (selectedMatchType) {
+        params.append('match_type_id', selectedMatchType.toString());
+      }
+      const response = await api.get(`${API_ENDPOINTS.MATCH_RESULTS}?${params.toString()}`);
       const sortedData = response.data.sort(
         (a: MatchResult, b: MatchResult) => b.id - a.id
       );
@@ -71,7 +80,7 @@ const MatchResults: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedEnvironment, selectedMatchType]);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -283,7 +292,37 @@ const MatchResults: React.FC = () => {
   return (
     <div className="match-results-container">
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={24}>
+        <Col xs={24} sm={12} md={8}>
+          <Select
+            placeholder="选择环境"
+            allowClear
+            value={selectedEnvironment}
+            onChange={(value) => setSelectedEnvironment(value)}
+            style={{ width: '100%' }}
+          >
+            {environments.map((env) => (
+              <Select.Option key={env.id} value={env.id}>
+                {env.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Col>
+        <Col xs={24} sm={12} md={8}>
+          <Select
+            placeholder="选择比赛类型"
+            allowClear
+            value={selectedMatchType}
+            onChange={(value) => setSelectedMatchType(value)}
+            style={{ width: '100%' }}
+          >
+            {matchTypes.map((mt) => (
+              <Select.Option key={mt.id} value={mt.id}>
+                {mt.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Col>
+        <Col xs={24} sm={24} md={8}>
           <Button type="primary" onClick={handleOpenBatchModal}>
             添加战绩
           </Button>
