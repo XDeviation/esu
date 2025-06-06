@@ -43,7 +43,7 @@ async def create_match_type(
     # 检查比赛类型名称是否已存在
     if await db.match_types.find_one({"name": match_type.name}):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="比赛类型名称已存在"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="地区环境名称已存在"
         )
 
     # 获取新的 ID
@@ -141,7 +141,7 @@ async def read_match_type(
     match_type = await db.match_types.find_one({"id": match_type_id})
     if not match_type:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="比赛类型不存在"
+            status_code=status.HTTP_404_NOT_FOUND, detail="地区环境不存在"
         )
     
     # 如果是私有比赛类型，检查权限
@@ -154,7 +154,7 @@ async def read_match_type(
         if current_user.role != UserRole.GUEST and current_user.id not in match_type.get("users", []):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权访问此比赛类型"
+                detail="无权访问此地区环境"
             )
     
     # 对于游客，不返回私有信息
@@ -200,7 +200,7 @@ async def delete_match_type(
     match_type = await db.match_types.find_one({"id": match_type_id})
     if not match_type:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="比赛类型不存在"
+            status_code=status.HTTP_404_NOT_FOUND, detail="地区环境不存在"
         )
 
     # 检查权限
@@ -208,22 +208,22 @@ async def delete_match_type(
     if not match_type.get("creator_id"):
         if current_user.role != UserRole.ADMIN:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="只有管理员可以删除此对局类型"
+                status_code=status.HTTP_403_FORBIDDEN, detail="只有管理员可以删除此地区环境"
             )
     elif match_type.get("creator_id") != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="您只能删除自己创建的对局类型"
+            status_code=status.HTTP_403_FORBIDDEN, detail="您只能删除自己创建的地区环境"
         )
 
     # 检查是否有对局使用此比赛类型
     if await db.match_results.find_one({"match_type_id": match_type_id}):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="无法删除正在使用的比赛类型"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="无法删除正在使用的地区环境"
         )
 
     # 删除比赛类型
     await db.match_types.delete_one({"id": match_type_id})
-    return {"message": "比赛类型已删除"}
+    return {"message": "地区环境已删除"}
 
 
 @router.post("/join", response_model=MatchType)

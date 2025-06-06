@@ -138,8 +138,8 @@ const BatchMatchModal: React.FC<BatchMatchModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="match_type_id"
-              label="比赛类型"
-              rules={[{ required: true, message: "请选择比赛类型" }]}
+              label="地区环境"
+              rules={[{ required: true, message: "请选择地区环境" }]}
             >
               <Select>
                 {matchTypes.map((type) => (

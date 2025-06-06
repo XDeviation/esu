@@ -262,7 +262,7 @@ const DeckMatchups: React.FC = () => {
               <Row justify="center">
                 <Space align="center">
                   <Title level={2} style={{ margin: 0 }}>
-                    卡组对战统计
+                    卡组优劣统计表
                   </Title>
                   <Tooltip title="点击单元格快速提交对局记录">
                     <QuestionCircleOutlined style={{ fontSize: '20px', color: '#1890ff', cursor: 'help' }} />

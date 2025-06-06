@@ -252,7 +252,7 @@ const MatchResults: React.FC = () => {
       },
     },
     {
-      title: "比赛类型",
+      title: "地区环境",
       dataIndex: "match_type_id",
       key: "match_type_id",
       render: (id: number) => {
@@ -309,7 +309,7 @@ const MatchResults: React.FC = () => {
         </Col>
         <Col xs={24} sm={12} md={8}>
           <Select
-            placeholder="选择比赛类型"
+            placeholder="选择地区环境"
             allowClear
             value={selectedMatchType}
             onChange={(value) => setSelectedMatchType(value)}

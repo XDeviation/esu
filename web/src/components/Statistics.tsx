@@ -229,7 +229,7 @@ const Statistics: React.FC = () => {
                     onChange={(value) => setSelectedMatchType(value)}
                     className="select-container"
                     loading={loading}
-                    placeholder="请选择比赛类型"
+                    placeholder="请选择地区环境"
                     allowClear
                   >
                     <Select.Option value="">全部</Select.Option>

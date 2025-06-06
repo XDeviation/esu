@@ -53,7 +53,7 @@ const Dashboard: React.FC = () => {
     {
       key: "match-types",
       icon: <TagsOutlined />,
-      label: "对局类型",
+      label: "地区环境",
     },
     {
       key: "match-results",
@@ -68,7 +68,7 @@ const Dashboard: React.FC = () => {
     {
       key: "deck-matchups",
       icon: <PieChartOutlined />,
-      label: "卡组对战",
+      label: "优劣统计表",
     },
     {
       key: "win-rate-table",

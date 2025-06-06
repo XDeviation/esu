@@ -136,7 +136,7 @@ const MatchTypes: React.FC = () => {
   const handleEdit = (record: MatchType) => {
     // 检查权限
     if (!isAdmin && record.creator_id !== currentUserId) {
-      message.warning("您只能编辑自己创建的对局类型");
+      message.warning("您只能编辑自己创建的地区环境");
       return;
     }
     setEditingMatchType(record);
@@ -150,7 +150,7 @@ const MatchTypes: React.FC = () => {
 
     // 检查权限
     if (!isAdmin && matchType.creator_id !== currentUserId) {
-      message.warning("您只能删除自己创建的对局类型");
+      message.warning("您只能删除自己创建的地区环境");
       return;
     }
 
@@ -258,7 +258,7 @@ const MatchTypes: React.FC = () => {
       responsive: ['xs'],
     },
     {
-      title: "比赛类型名称",
+      title: "地区环境名称",
       dataIndex: "name",
       key: "name",
     },
@@ -309,7 +309,7 @@ const MatchTypes: React.FC = () => {
             编辑
           </Button>
           <Popconfirm
-            title="确定要删除这个比赛类型吗？"
+            title="确定要删除这个地区环境吗？"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
@@ -329,10 +329,10 @@ const MatchTypes: React.FC = () => {
         <Col xs={24} sm={24}>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              创建比赛类型
+              创建地区环境
             </Button>
             <Button onClick={() => setJoinModalVisible(true)}>
-              加入比赛类型
+              加入地区环境
             </Button>
           </Space>
         </Col>
@@ -351,7 +351,7 @@ const MatchTypes: React.FC = () => {
         }}
       />
       <Modal
-        title={editingMatchType ? "编辑比赛类型" : "创建比赛类型"}
+        title={editingMatchType ? "编辑地区环境" : "创建地区环境"}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => setModalVisible(false)}
@@ -362,8 +362,8 @@ const MatchTypes: React.FC = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="比赛类型名称"
-            rules={[{ required: true, message: "请输入比赛类型名称" }]}
+            label="地区环境名称"
+            rules={[{ required: true, message: "请输入地区环境名称" }]}
           >
             <Input />
           </Form.Item>
@@ -374,7 +374,7 @@ const MatchTypes: React.FC = () => {
             tooltip={
               !isAdmin
                 ? editingMatchType
-                  ? "普通用户不能修改对局类型的私有属性"
+                  ? "普通用户不能修改地区环境的私有属性"
                   : "普通用户只能创建私有类型"
                 : undefined
             }
@@ -384,7 +384,7 @@ const MatchTypes: React.FC = () => {
         </Form>
       </Modal>
       <Modal
-        title="加入比赛类型"
+        title="加入地区环境"
         open={joinModalVisible}
         onOk={handleJoin}
         onCancel={() => setJoinModalVisible(false)}
