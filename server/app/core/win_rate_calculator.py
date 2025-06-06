@@ -5,6 +5,7 @@ import numpy as np
 from ..models.deck import Deck
 from ..models.match_result import MatchResult
 from ..models.win_rate import WinRateCalculation
+from ..models.prior_knowledge import DeckMatchupPrior
 
 
 class WinRateCalculator:
@@ -14,9 +15,9 @@ class WinRateCalculator:
         self.min_valid_matches = min_valid_matches
 
     def calculate_average_win_rate(
-        self, deck_id: int, match_results: List[MatchResult]
+        self, deck_id: int, match_results: List[MatchResult], matchup_priors: Dict[str, DeckMatchupPrior]
     ) -> float:
-        """计算卡组的平均胜率"""
+        """计算卡组的平均胜率，考虑先验数据"""
         total_win_rate = 0
         count = 0
 
@@ -39,17 +40,33 @@ class WinRateCalculator:
             if is_win:
                 opponent_stats[opponent_id]["wins"] += 1
 
-        # 计算加权平均胜率
+        # 计算加权平均胜率，考虑先验数据
         total_weight = 0
         weighted_sum = 0
 
         for opponent_id, stats in opponent_stats.items():
-            if stats["total"] >= self.min_valid_matches:
-                win_rate = stats["wins"] / stats["total"]
-                weight = stats["total"]
-            else:
-                win_rate = 0.5  # 当对局数不足时，视为50%胜率
-                weight = stats["total"]
+            # 获取先验数据
+            prior_key = f"{deck_id}_{opponent_id}"
+            reverse_prior_key = f"{opponent_id}_{deck_id}"
+            
+            # 合并实际数据和先验数据
+            total_matches = stats["total"]
+            total_wins = stats["wins"]
+            
+            # 检查正向先验数据
+            if prior_key in matchup_priors:
+                prior = matchup_priors[prior_key]
+                total_matches += prior.prior_matches
+                total_wins += prior.prior_wins
+            # 检查反向先验数据
+            elif reverse_prior_key in matchup_priors:
+                prior = matchup_priors[reverse_prior_key]
+                total_matches += prior.prior_matches
+                total_wins += (prior.prior_matches - prior.prior_wins)  # 反向先验数据需要转换胜场数
+            
+            # 计算后验胜率
+            win_rate = total_wins / total_matches if total_matches > 0 else 0
+            weight = total_matches
 
             total_weight += weight
             weighted_sum += weight * win_rate
@@ -62,6 +79,7 @@ class WinRateCalculator:
         match_results: List[MatchResult],
         previous_win_rates: Dict[int, float],
         environment_offsets: Optional[Dict[int, float]] = None,
+        matchup_priors: Optional[Dict[str, DeckMatchupPrior]] = None,
     ) -> float:
         """计算卡组的加权胜率"""
         total_weight = 0
@@ -103,11 +121,27 @@ class WinRateCalculator:
             environment_factor = (opponent_offset / 10) + 1
             weight = base_weight * environment_factor
 
-            # 根据对局数决定胜率
-            if stats["total"] >= self.min_valid_matches:
-                win_rate = stats["wins"] / stats["total"]
-            else:
-                win_rate = 0.5  # 当对局数不足时，视为50%胜率
+            # 获取先验数据
+            prior_key = f"{deck_id}_{opponent_id}"
+            reverse_prior_key = f"{opponent_id}_{deck_id}"
+            
+            # 合并实际数据和先验数据
+            total_matches = stats["total"]
+            total_wins = stats["wins"]
+            
+            # 检查正向先验数据
+            if matchup_priors and prior_key in matchup_priors:
+                prior = matchup_priors[prior_key]
+                total_matches += prior.prior_matches
+                total_wins += prior.prior_wins
+            # 检查反向先验数据
+            elif matchup_priors and reverse_prior_key in matchup_priors:
+                prior = matchup_priors[reverse_prior_key]
+                total_matches += prior.prior_matches
+                total_wins += (prior.prior_matches - prior.prior_wins)  # 反向先验数据需要转换胜场数
+            
+            # 计算后验胜率
+            win_rate = total_wins / total_matches if total_matches > 0 else 0
 
             total_weight += weight
             weighted_sum += weight * win_rate
@@ -119,11 +153,12 @@ class WinRateCalculator:
         decks: List[Deck],
         match_results: List[MatchResult],
         environment_offsets: Optional[Dict[int, float]] = None,
+        matchup_priors: Optional[Dict[str, DeckMatchupPrior]] = None,
     ) -> Dict[int, WinRateCalculation]:
         """计算所有卡组的最终胜率"""
         # 计算初始平均胜率
         initial_win_rates = {
-            deck.id: self.calculate_average_win_rate(deck.id, match_results)
+            deck.id: self.calculate_average_win_rate(deck.id, match_results, matchup_priors or {})
             for deck in decks
         }
 
@@ -136,7 +171,7 @@ class WinRateCalculator:
 
             for deck in decks:
                 raw_new_rate = self.calculate_weighted_win_rate(
-                    deck.id, match_results, current_win_rates, environment_offsets
+                    deck.id, match_results, current_win_rates, environment_offsets, matchup_priors
                 )
                 new_win_rates[deck.id] = current_win_rates[
                     deck.id

@@ -12,6 +12,7 @@ from .api.endpoints import (
     statistics,
     users,
     win_rates,
+    prior_knowledge,
 )
 from .core.config import config
 from .db.mongodb import db
@@ -55,3 +56,4 @@ app.include_router(
 app.include_router(statistics.router, prefix="/api/v1", tags=["statistics"])
 app.include_router(win_rates.router, prefix="/api/v1/win-rates", tags=["win-rates"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(prior_knowledge.router, prefix="/api/v1/prior-knowledge", tags=["prior-knowledge"])

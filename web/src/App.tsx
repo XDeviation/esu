@@ -15,6 +15,7 @@ import MatchResults from "./components/MatchResults";
 import Statistics from "./components/Statistics";
 import DeckMatchups from "./components/DeckMatchups";
 import WinRateTable from "./components/WinRateTable";
+import PriorKnowledgeTable from './components/PriorKnowledgeTable';
 import "./App.css";
 
 const App: React.FC = () => {
@@ -31,6 +32,7 @@ const App: React.FC = () => {
             <Route path="statistics" element={<Statistics />} />
             <Route path="deck-matchups" element={<DeckMatchups />} />
             <Route path="win-rate-table" element={<WinRateTable />} />
+            <Route path="prior-knowledge" element={<PriorKnowledgeTable />} />
             <Route index element={<Navigate to="environments" replace />} />
           </Route>
         </Routes>

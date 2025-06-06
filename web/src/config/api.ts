@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
   DECK_MATCHUPS: `${API_BASE_URL}/api/v1/deck-matchups`,
   WIN_RATES: `${API_BASE_URL}/api/v1/win-rates`,
   CHECK_ADMIN: `${API_BASE_URL}/api/v1/check-admin`,
+  PRIOR_KNOWLEDGE: `${API_BASE_URL}/api/v1/prior-knowledge/matchup-priors`,
 } as const;
 
 // 创建 axios 实例

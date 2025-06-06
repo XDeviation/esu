@@ -7,4 +7,5 @@ from . import (
     statistics,
     users,
     win_rates,
+    prior_knowledge,
 )

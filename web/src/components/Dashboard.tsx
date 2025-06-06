@@ -14,6 +14,7 @@ import {
   UserOutlined,
   LoginOutlined,
   UserAddOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 
 const { Header, Content, Sider } = Layout;
@@ -74,6 +75,12 @@ const Dashboard: React.FC = () => {
       key: "win-rate-table",
       icon: <TableOutlined />,
       label: "梯度表（开发中）",
+    },
+    {
+      key: 'prior-knowledge',
+      icon: <SettingOutlined />,
+      label: '梯度表-先验数据',
+      hidden: !['admin', 'moderator'].includes(user.role)
     },
   ];
 

@@ -107,6 +107,15 @@ class MongoDB:
                 {"name": "match_result_id"}, {"$setOnInsert": {"seq": 0}}, upsert=True
             )
 
+        if "deck_matchup_priors" not in collections:
+            await cls.db.create_collection("deck_matchup_priors")
+            collection = cls.db.get_collection("deck_matchup_priors")
+            # 创建复合索引，确保deck_a_id和deck_b_id的组合是唯一的
+            await collection.create_index(
+                [("deck_a_id", 1), ("deck_b_id", 1)],
+                unique=True
+            )
+
     @classmethod
     def get_collection(cls, collection_name: str):
         return cls.db[collection_name]
