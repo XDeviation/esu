@@ -11,6 +11,11 @@ import {
   Col,
   Space,
   Tooltip,
+  Modal,
+  Form,
+  InputNumber,
+  Button,
+  Switch,
 } from "antd";
 import api from "../config/api";
 import { MatchType, BatchMatch } from "../types";
@@ -48,6 +53,17 @@ interface MatchupStatistics {
   };
 }
 
+interface DeckMatchupPrior {
+  deck_a_id: number;
+  deck_b_id: number;
+  prior_matches: number;
+  prior_wins: number;
+}
+
+interface DeckMatchupPriorResponse {
+  matchup_priors: { [key: string]: DeckMatchupPrior };
+}
+
 const DeckMatchups: React.FC = () => {
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>("");
   const [selectedMatchType, setSelectedMatchType] = useState<string>("");
@@ -67,6 +83,9 @@ const DeckMatchups: React.FC = () => {
       }
     | undefined
   >(undefined);
+  const [usePriorData, setUsePriorData] = useState(false);
+  const [priors, setPriors] = useState<{ [key: string]: DeckMatchupPrior }>({});
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -118,6 +137,27 @@ const DeckMatchups: React.FC = () => {
     }
   }, [selectedEnvironment, selectedMatchType, selectedHand]);
 
+  const checkAdminStatus = useCallback(async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+    } catch (error) {
+      console.error('检查管理员状态失败:', error);
+      setIsAdmin(false);
+    }
+  }, []);
+
+  const fetchPriorData = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const response = await api.get<DeckMatchupPriorResponse>(API_ENDPOINTS.PRIOR_KNOWLEDGE);
+      setPriors(response.data.matchup_priors);
+    } catch (error) {
+      console.error('获取先验数据失败:', error);
+      message.error('获取先验数据失败');
+    }
+  }, [isAdmin]);
+
   useEffect(() => {
     fetchEnvironments();
     fetchMatchTypes();
@@ -126,6 +166,16 @@ const DeckMatchups: React.FC = () => {
   useEffect(() => {
     fetchStatistics();
   }, [fetchStatistics]);
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, [checkAdminStatus]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchPriorData();
+    }
+  }, [isAdmin, fetchPriorData]);
 
   const handleCellClick = (rowDeckId: string, colDeckId: string) => {
     const initialValues = {
@@ -157,21 +207,51 @@ const DeckMatchups: React.FC = () => {
     }
   };
 
-  const getMatchupData = () => {
+  const mergeStatsWithPrior = (stats: MatchupStats, deckAId: string, deckBId: string): MatchupStats => {
+    if (!usePriorData || !isAdmin) return stats;
+
+    const priorKey = `${deckAId}_${deckBId}`;
+    const reversePriorKey = `${deckBId}_${deckAId}`;
+    
+    let priorMatches = 0;
+    let priorWins = 0;
+
+    if (priors[priorKey]) {
+      priorMatches = priors[priorKey].prior_matches;
+      priorWins = priors[priorKey].prior_wins;
+    }
+    else if (priors[reversePriorKey]) {
+      priorMatches = priors[reversePriorKey].prior_matches;
+      priorWins = priors[reversePriorKey].prior_matches - priors[reversePriorKey].prior_wins;
+    }
+
+    const totalMatches = stats.total + priorMatches;
+    const totalWins = stats.wins + priorWins;
+    const winRate = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
+
+    return {
+      ...stats,
+      total: totalMatches,
+      wins: totalWins,
+      win_rate: winRate
+    };
+  };
+
+  const getTableData = () => {
     if (!statistics) return [];
 
-    const decks = Object.entries(statistics.matchup_statistics);
-    return decks.map(([deckId, deck]) => {
-      const rowData: Record<string, string | MatchupStats | null> = {
+    return Object.entries(statistics.matchup_statistics).map(([deckId, deckStats]) => {
+      const row: any = {
         key: deckId,
-        deck_name: deck.deck_name,
+        deck_name: deckStats.deck_name,
       };
 
-      decks.forEach(([opponentId]) => {
-        rowData[opponentId] = deck.matchups[opponentId] || null;
+      Object.entries(deckStats.matchups).forEach(([opponentId, matchupStats]) => {
+        const mergedStats = mergeStatsWithPrior(matchupStats, deckId, opponentId);
+        row[opponentId] = mergedStats;
       });
 
-      return rowData;
+      return row;
     });
   };
 
@@ -315,6 +395,17 @@ const DeckMatchups: React.FC = () => {
                     <Select.Option value="second">仅后手</Select.Option>
                   </Select>
                 </Col>
+                {isAdmin && (
+                  <Col xs={24} sm={12} md={8}>
+                    <Space>
+                      <Switch
+                        checked={usePriorData}
+                        onChange={setUsePriorData}
+                      />
+                      <span>加入先验数据</span>
+                    </Space>
+                  </Col>
+                )}
               </Row>
             </Space>
           </Col>
@@ -325,7 +416,7 @@ const DeckMatchups: React.FC = () => {
         <Spin spinning={loading}>
           {statistics && (
             <Table
-              dataSource={getMatchupData()}
+              dataSource={getTableData()}
               columns={getMatchupColumns()}
               pagination={false}
               scroll={{ x: 'max-content' }}
