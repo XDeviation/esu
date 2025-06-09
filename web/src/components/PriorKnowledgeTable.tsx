@@ -4,6 +4,7 @@ import type { TableProps } from 'antd';
 import api from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
 import { QuestionCircleOutlined } from '@ant-design/icons';
+import { useLocation } from 'react-router-dom';
 
 const { Title } = Typography;
 
@@ -43,6 +44,7 @@ const PriorKnowledgeTable: React.FC = () => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [priors, setPriors] = useState<{ [key: string]: DeckMatchupPrior }>({});
+  const location = useLocation();
 
   // 获取卡组数据
   const fetchDecks = async () => {
@@ -52,6 +54,7 @@ const PriorKnowledgeTable: React.FC = () => {
       setDecks(response.data);
     } catch (error) {
       console.error('获取卡组数据失败:', error);
+      message.error('获取卡组数据失败');
     }
   };
 
@@ -62,6 +65,7 @@ const PriorKnowledgeTable: React.FC = () => {
       setEnvironments(response.data);
     } catch (error) {
       console.error('获取环境数据失败:', error);
+      message.error('获取环境数据失败');
     }
   };
 
@@ -72,6 +76,7 @@ const PriorKnowledgeTable: React.FC = () => {
       setPriors(response.data.matchup_priors);
     } catch (error) {
       console.error('获取先验数据失败:', error);
+      message.error('获取先验数据失败');
     }
   };
 

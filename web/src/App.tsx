@@ -16,7 +16,42 @@ import Statistics from "./components/Statistics";
 import DeckMatchups from "./components/DeckMatchups";
 import WinRateTable from "./components/WinRateTable";
 import PriorKnowledgeTable from './components/PriorKnowledgeTable';
+import api from "./config/api";
+import { API_ENDPOINTS } from "./config/api";
 import "./App.css";
+
+// 添加权限检查组件
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [isModerator, setIsModerator] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+        setIsAdmin(response.data.is_admin);
+        setIsModerator(response.data.is_moderator);
+      } catch {
+        setIsAdmin(false);
+        setIsModerator(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkAdminStatus();
+  }, []);
+
+  if (loading) {
+    return null; // 或者返回一个加载指示器
+  }
+
+  if (!isAdmin && !isModerator) {
+    return <Navigate to="/environments" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   return (
@@ -32,7 +67,14 @@ const App: React.FC = () => {
             <Route path="statistics" element={<Statistics />} />
             <Route path="deck-matchups" element={<DeckMatchups />} />
             <Route path="win-rate-table" element={<WinRateTable />} />
-            <Route path="prior-knowledge" element={<PriorKnowledgeTable />} />
+            <Route 
+              path="prior-knowledge" 
+              element={
+                <AdminRoute>
+                  <PriorKnowledgeTable />
+                </AdminRoute>
+              } 
+            />
             <Route index element={<Navigate to="environments" replace />} />
           </Route>
         </Routes>

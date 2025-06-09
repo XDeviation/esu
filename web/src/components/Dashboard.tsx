@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Layout, Menu, theme, Space, Button, Typography, Drawer } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -16,6 +16,8 @@ import {
   UserAddOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
+import api from "../config/api";
+import { API_ENDPOINTS } from "../config/api";
 
 const { Header, Content, Sider } = Layout;
 const { Text } = Typography;
@@ -25,6 +27,8 @@ const Dashboard: React.FC = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -39,6 +43,22 @@ const Dashboard: React.FC = () => {
   console.log("Current user:", user);
   const isGuest = user.name === "游客" || user.role === "guest";
   console.log("Is guest:", isGuest);
+
+  // 检查管理员状态
+  const checkAdminStatus = async () => {
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      setIsAdmin(response.data.is_admin);
+      setIsModerator(response.data.is_moderator);
+    } catch {
+      setIsAdmin(false);
+      setIsModerator(false);
+    }
+  };
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
 
   const menuItems = [
     {
@@ -76,12 +96,11 @@ const Dashboard: React.FC = () => {
       icon: <TableOutlined />,
       label: "梯度表（开发中）",
     },
-    {
+    ...(isAdmin || isModerator ? [{
       key: 'prior-knowledge',
       icon: <SettingOutlined />,
       label: '梯度表-先验数据',
-      hidden: !['admin', 'moderator'].includes(user.role)
-    },
+    }] : []),
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
