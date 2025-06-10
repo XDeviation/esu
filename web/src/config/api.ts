@@ -51,7 +51,12 @@ api.interceptors.response.use(
         // 如果是游客，不跳转到登录页
         return Promise.reject(error);
       }
-      // 清除 token 并跳转到登录页
+      // 检查是否是权限检查接口
+      if (error.config.url === API_ENDPOINTS.CHECK_ADMIN) {
+        // 如果是权限检查接口，直接返回错误，让组件处理
+        return Promise.reject(error);
+      }
+      // 其他接口的401错误，清除token并跳转到登录页
       localStorage.removeItem("token");
       window.location.href = "/login";
     }
