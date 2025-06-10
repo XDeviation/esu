@@ -63,6 +63,11 @@ const PriorKnowledgeTable: React.FC = () => {
     try {
       const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
       setEnvironments(response.data);
+      // 设置默认选择最后一个环境
+      if (response.data.length > 0) {
+        const lastEnvironment = response.data[response.data.length - 1];
+        setSelectedEnvironment(lastEnvironment.id);
+      }
     } catch (error) {
       console.error('获取环境数据失败:', error);
       message.error('获取环境数据失败');
@@ -83,10 +88,16 @@ const PriorKnowledgeTable: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchDecks(), fetchEnvironments(), fetchPriorData()]);
+      await Promise.all([fetchEnvironments(), fetchPriorData()]);
       setLoading(false);
     };
     loadData();
+  }, []);
+
+  useEffect(() => {
+    if (selectedEnvironment) {
+      fetchDecks();
+    }
   }, [selectedEnvironment]);
 
   // 生成表格数据
@@ -265,13 +276,12 @@ const PriorKnowledgeTable: React.FC = () => {
       <Space direction="vertical" style={{ width: '100%' }}>
         <Space>
           <Title level={4}>梯度表-先验数据</Title>
-          <Tooltip title="为了使得梯度表中，对于少样本对局的胜率估计更准确，增设本页面。请填入大家认为的各个对局的优劣情况。若是十分确定本对局的优劣情况，总局数填20。否则填10。修改前请咨询881小团体意见。谢谢配合。">
+          <Tooltip title="为了使得梯度表中，对于少样本对局的胜率估计更准确，增设本页面。请填入大家认为的各个对局的优劣情况。若是十分确定本对局的优劣情况，总局数填10或以上。否则填10。修改前请咨询881小团体意见。谢谢配合。">
             <QuestionCircleOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
           </Tooltip>
           <Select
             style={{ width: 200 }}
             placeholder="选择环境"
-            allowClear
             value={selectedEnvironment}
             onChange={setSelectedEnvironment}
             options={environments.map(env => ({
@@ -305,18 +315,18 @@ const PriorKnowledgeTable: React.FC = () => {
           }}
         >
           <Form.Item
-            label="先验总对局数"
+            label="总对局数"
             name="prior_matches"
-            rules={[{ required: true, message: '请输入先验总对局数' }]}
+            rules={[{ required: true, message: '请输入总对局数' }]}
           >
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
           
           <Form.Item
-            label="先验胜利局数"
+            label={`${selectedMatchup?.deckA.name}胜利局数`}
             name="prior_wins"
             rules={[
-              { required: true, message: '请输入先验胜利局数' },
+              { required: true, message: '请输入胜利局数' },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || value <= getFieldValue('prior_matches')) {
