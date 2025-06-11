@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useNavigate,
 } from "react-router-dom";
 import { App as AntApp } from "antd";
 import Login from "./components/Login";
@@ -27,24 +28,44 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = React.useState(true);
   const [retryCount, setRetryCount] = React.useState(0);
   const [hasChecked, setHasChecked] = React.useState(false);
+  const navigate = useNavigate();
 
   const checkAdminStatus = React.useCallback(async () => {
-    if (hasChecked) return;
+    console.log('AdminRoute - 开始检查权限状态...', { hasChecked, retryCount });
     
-    console.log('开始检查权限状态...');
+    if (hasChecked) {
+      console.log('AdminRoute - 已经检查过权限，跳过');
+      return;
+    }
+    
     try {
       const token = localStorage.getItem("token");
-      console.log('当前token:', token);
+      console.log('AdminRoute - 当前token:', token);
+      
+      if (!token) {
+        console.log('AdminRoute - 没有token，重定向到登录页');
+        navigate('/login', { replace: true });
+        return;
+      }
       
       const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
-      console.log('权限检查响应:', response.data);
+      console.log('AdminRoute - 权限检查响应:', response.data);
       
-      setIsAdmin(response.data.is_admin);
-      setIsModerator(response.data.is_moderator);
-      setHasChecked(true);
-      setLoading(false);
+      if (response.data.is_admin || response.data.is_moderator) {
+        console.log('AdminRoute - 用户具有权限:', {
+          isAdmin: response.data.is_admin,
+          isModerator: response.data.is_moderator
+        });
+        setIsAdmin(response.data.is_admin);
+        setIsModerator(response.data.is_moderator);
+        setHasChecked(true);
+        setLoading(false);
+      } else {
+        console.log('AdminRoute - 用户没有权限，重定向到环境页面');
+        navigate('/environments', { replace: true });
+      }
     } catch (error: any) {
-      console.error('权限检查失败:', {
+      console.error('AdminRoute - 权限检查失败:', {
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
@@ -54,49 +75,46 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         }
       });
       
-      // 如果是401错误，说明token可能过期，让响应拦截器处理
       if (error.response?.status === 401) {
-        console.log('遇到401错误，等待响应拦截器处理');
+        console.log('AdminRoute - 遇到401错误，重定向到登录页');
+        navigate('/login', { replace: true });
         return;
       }
-      // 其他错误，重试最多3次
+      
       if (retryCount < 3) {
-        console.log(`重试第${retryCount + 1}次...`);
+        console.log(`AdminRoute - 重试第${retryCount + 1}次...`);
         setRetryCount(prev => prev + 1);
-        setTimeout(checkAdminStatus, 1000); // 1秒后重试
+        setTimeout(checkAdminStatus, 1000);
       } else {
-        console.log('达到最大重试次数，设置权限为false');
-        setIsAdmin(false);
-        setIsModerator(false);
-        setHasChecked(true);
-        setLoading(false);
+        console.log('AdminRoute - 达到最大重试次数，重定向到环境页面');
+        navigate('/environments', { replace: true });
       }
     }
-  }, [retryCount, hasChecked]);
+  }, [retryCount, hasChecked, navigate]);
 
   React.useEffect(() => {
+    console.log('AdminRoute - useEffect 触发');
     checkAdminStatus();
   }, [checkAdminStatus]);
 
-  const shouldRender = React.useMemo(() => {
-    console.log('当前权限状态:', { isAdmin, isModerator, loading, retryCount, hasChecked });
-    
-    if (loading) {
-      return <div>加载中...</div>;
-    }
+  console.log('AdminRoute - 渲染状态:', { isAdmin, isModerator, loading, retryCount, hasChecked });
 
-    if (!isAdmin && !isModerator) {
-      console.log('权限不足，重定向到环境页面');
-      return <Navigate to="/environments" replace />;
-    }
+  if (loading) {
+    console.log('AdminRoute - 显示加载状态');
+    return <div>加载中...</div>;
+  }
 
-    return <>{children}</>;
-  }, [isAdmin, isModerator, loading, retryCount, hasChecked, children]);
+  if (!isAdmin && !isModerator) {
+    console.log('AdminRoute - 权限不足，返回null');
+    return null;
+  }
 
-  return shouldRender;
+  console.log('AdminRoute - 渲染子组件');
+  return <>{children}</>;
 };
 
 const App: React.FC = () => {
+  console.log('App - 渲染');
   return (
     <AntApp>
       <Router>

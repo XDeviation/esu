@@ -13,7 +13,7 @@ import { UserOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import axios, { AxiosError } from "axios";
 import { API_ENDPOINTS } from "../config/api";
 import md5 from "md5";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
@@ -30,6 +30,7 @@ interface RegisterFormData {
 
 const Login: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "login");
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
@@ -64,7 +65,7 @@ const Login: React.FC = () => {
         })
       );
       message.success("登录成功！");
-      window.location.href = "/";
+      navigate("/", { replace: true });
     } catch (error) {
       if (error instanceof AxiosError) {
         const status = error.response?.status;
@@ -195,7 +196,7 @@ const Login: React.FC = () => {
                             })
                           );
                           message.success("已进入游客模式！");
-                          window.location.href = "/";
+                          navigate("/", { replace: true });
                         }}
                       >
                         以游客身份访问
