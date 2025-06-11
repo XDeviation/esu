@@ -29,22 +29,40 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   React.useEffect(() => {
     const checkAdminStatus = async () => {
+      console.log('开始检查权限状态...');
       try {
+        const token = localStorage.getItem("token");
+        console.log('当前token:', token);
+        
         const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+        console.log('权限检查响应:', response.data);
+        
         setIsAdmin(response.data.is_admin);
         setIsModerator(response.data.is_moderator);
         setLoading(false);
       } catch (error: any) {
-        console.error('权限检查失败:', error);
+        console.error('权限检查失败:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: {
+            url: error.config?.url,
+            headers: error.config?.headers
+          }
+        });
+        
         // 如果是401错误，说明token可能过期，让响应拦截器处理
         if (error.response?.status === 401) {
+          console.log('遇到401错误，等待响应拦截器处理');
           return;
         }
         // 其他错误，重试最多3次
         if (retryCount < 3) {
+          console.log(`重试第${retryCount + 1}次...`);
           setRetryCount(prev => prev + 1);
           setTimeout(checkAdminStatus, 1000); // 1秒后重试
         } else {
+          console.log('达到最大重试次数，设置权限为false');
           setIsAdmin(false);
           setIsModerator(false);
           setLoading(false);
@@ -54,11 +72,14 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     checkAdminStatus();
   }, [retryCount]);
 
+  console.log('当前权限状态:', { isAdmin, isModerator, loading, retryCount });
+
   if (loading) {
     return <div>加载中...</div>;
   }
 
   if (!isAdmin && !isModerator) {
+    console.log('权限不足，重定向到环境页面');
     return <Navigate to="/environments" replace />;
   }
 

@@ -31,32 +31,56 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+    console.log('请求拦截器 - 当前token:', token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('请求拦截器 - 设置Authorization头:', config.headers.Authorization);
     }
     return config;
   },
   (error) => {
+    console.error('请求拦截器错误:', error);
     return Promise.reject(error);
   }
 );
 
 // 响应拦截器
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('响应拦截器 - 成功响应:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
+    console.error('响应拦截器 - 错误:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    });
+
     if (error.response?.status === 401) {
       const token = localStorage.getItem("token");
+      console.log('响应拦截器 - 401错误处理:', {
+        token,
+        isGuest: token === "guest",
+        isCheckAdmin: error.config?.url === API_ENDPOINTS.CHECK_ADMIN
+      });
+
       if (token === "guest") {
-        // 如果是游客，不跳转到登录页
+        console.log('游客token，不跳转');
         return Promise.reject(error);
       }
-      // 检查是否是权限检查接口
-      if (error.config.url === API_ENDPOINTS.CHECK_ADMIN) {
-        // 如果是权限检查接口，直接返回错误，让组件处理
+      
+      if (error.config?.url === API_ENDPOINTS.CHECK_ADMIN) {
+        console.log('权限检查接口401，让组件处理');
         return Promise.reject(error);
       }
-      // 其他接口的401错误，清除token并跳转到登录页
+      
+      console.log('其他接口401，清除token并跳转');
       localStorage.removeItem("token");
       window.location.href = "/login";
     }
