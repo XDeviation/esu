@@ -137,7 +137,7 @@ const Dashboard: React.FC = () => {
             color: '#999',
             marginLeft: '8px'
           }}>
-            v0611
+            v0611.1
           </Text>
         </div>
         <Space size="small">

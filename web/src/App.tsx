@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import { App as AntApp } from "antd";
 import Login from "./components/Login";
@@ -29,9 +30,10 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [retryCount, setRetryCount] = React.useState(0);
   const [hasChecked, setHasChecked] = React.useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const checkAdminStatus = React.useCallback(async () => {
-    console.log('AdminRoute - 开始检查权限状态...', { hasChecked, retryCount });
+    console.log('AdminRoute - 开始检查权限状态...', { hasChecked, retryCount, path: location.pathname });
     
     if (hasChecked) {
       console.log('AdminRoute - 已经检查过权限，跳过');
@@ -90,14 +92,15 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         navigate('/environments', { replace: true });
       }
     }
-  }, [retryCount, hasChecked, navigate]);
+  }, [retryCount, hasChecked, navigate, location.pathname]);
 
   React.useEffect(() => {
-    console.log('AdminRoute - useEffect 触发');
+    console.log('AdminRoute - useEffect 触发', { path: location.pathname });
+    setHasChecked(false); // 重置检查状态
     checkAdminStatus();
-  }, [checkAdminStatus]);
+  }, [checkAdminStatus, location.pathname]);
 
-  console.log('AdminRoute - 渲染状态:', { isAdmin, isModerator, loading, retryCount, hasChecked });
+  console.log('AdminRoute - 渲染状态:', { isAdmin, isModerator, loading, retryCount, hasChecked, path: location.pathname });
 
   if (loading) {
     console.log('AdminRoute - 显示加载状态');
