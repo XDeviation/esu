@@ -4,8 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
-  useNavigate,
-  useLocation,
+  useNavigate
 } from "react-router-dom";
 import { App as AntApp } from "antd";
 import Login from "./components/Login";
