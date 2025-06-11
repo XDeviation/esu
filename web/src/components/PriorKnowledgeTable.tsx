@@ -63,6 +63,12 @@ const PriorKnowledgeTable: React.FC = () => {
         setPriors(priorDataResponse.data.matchup_priors);
         setHasPermission(true);
         setIsInitialized(true);
+        
+        // 设置默认选择最后一个环境
+        if (environmentsResponse.data.length > 0) {
+          const lastEnvironment = environmentsResponse.data[environmentsResponse.data.length - 1];
+          setSelectedEnvironment(lastEnvironment.id);
+        }
       } catch (error: any) {
         if (error.response?.status === 401) {
           localStorage.removeItem("token");
