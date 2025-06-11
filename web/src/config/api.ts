@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
   WIN_RATES: `${API_BASE_URL}/api/v1/win-rates`,
   CHECK_ADMIN: `${API_BASE_URL}/api/v1/check-admin`,
   PRIOR_KNOWLEDGE: `${API_BASE_URL}/api/v1/prior-knowledge/matchup-priors`,
+  REFRESH_TOKEN: `${API_BASE_URL}/api/v1/token/refresh/`,
 } as const;
 
 // 创建 axios 实例
@@ -26,6 +27,36 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+// 是否正在刷新token
+let isRefreshing = false;
+// 重试队列
+let retryQueue: ((token: string) => void)[] = [];
+
+// 刷新token的函数
+const refreshToken = async () => {
+  try {
+    const response = await axios.post(API_ENDPOINTS.REFRESH_TOKEN, {
+      refresh: localStorage.getItem("refresh_token"),
+    });
+    const { access } = response.data;
+    localStorage.setItem("token", access);
+    return access;
+  } catch (error) {
+    console.error('刷新token失败:', error);
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+    throw error;
+  }
+};
+
+// 处理重试队列
+const processQueue = (token: string) => {
+  retryQueue.forEach(callback => callback(token));
+  retryQueue = [];
+};
 
 // 请求拦截器
 api.interceptors.request.use(
@@ -56,7 +87,7 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  async (error) => {
     console.error('响应拦截器 - 错误:', {
       url: error.config?.url,
       status: error.response?.status,
@@ -70,6 +101,8 @@ api.interceptors.response.use(
       },
       timestamp: new Date().toISOString()
     });
+
+    const originalRequest = error.config;
 
     if (error.response?.status === 401) {
       const token = localStorage.getItem("token");
@@ -96,14 +129,37 @@ api.interceptors.response.use(
         });
         return Promise.reject(error);
       }
-      
-      console.log('其他接口401，清除token并跳转', {
-        requestUrl: error.config?.url,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+
+      // 如果不是刷新token的请求，尝试刷新token
+      if (error.config?.url !== API_ENDPOINTS.REFRESH_TOKEN) {
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            const newToken = await refreshToken();
+            isRefreshing = false;
+            processQueue(newToken);
+            // 重试原始请求
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          } catch (refreshError) {
+            isRefreshing = false;
+            console.error('刷新token失败，清除认证信息并跳转:', refreshError);
+            localStorage.removeItem("token");
+            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("user");
+            window.location.href = "/login";
+            return Promise.reject(refreshError);
+          }
+        } else {
+          // 如果正在刷新token，将请求加入重试队列
+          return new Promise((resolve) => {
+            retryQueue.push((token: string) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(api(originalRequest));
+            });
+          });
+        }
+      }
     }
     return Promise.reject(error);
   }
