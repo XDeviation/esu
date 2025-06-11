@@ -160,12 +160,12 @@ const Decks: React.FC = () => {
       }
 
       if (editingDeck) {
-        const response = await api.put(
+        await api.put(
           `${API_ENDPOINTS.DECKS}${editingDeck.id}/`,
           values
         );
       } else {
-        const response = await api.post(API_ENDPOINTS.DECKS, values);
+        await api.post(API_ENDPOINTS.DECKS, values);
       }
       setModalVisible(false);
       fetchDecks();

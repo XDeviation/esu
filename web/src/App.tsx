@@ -30,7 +30,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [retryCount, setRetryCount] = useState(0);
   const [hasChecked, setHasChecked] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
 
   const checkAdminStatus = React.useCallback(async () => {
     if (hasChecked) {
@@ -39,7 +39,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     
     try {
       const token = localStorage.getItem("token");
-      const user = localStorage.getItem("user");
+      // const user = localStorage.getItem("user");
       
       if (!token) {
         navigate('/login', { replace: true });

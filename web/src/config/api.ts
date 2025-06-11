@@ -81,7 +81,6 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
       const token = localStorage.getItem("token");
-      const user = localStorage.getItem("user");
 
       if (token === "guest") {
         return Promise.reject(error);
