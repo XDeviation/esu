@@ -132,6 +132,13 @@ const Dashboard: React.FC = () => {
             className="mobile-menu-button"
           />
           <h1 style={{ margin: 0, color: "#1890ff", fontSize: "1.2rem" }}>SVEC 战绩管理器</h1>
+          <Text style={{ 
+            fontSize: '12px',
+            color: '#999',
+            marginLeft: '8px'
+          }}>
+            v0611
+          </Text>
         </div>
         <Space size="small">
           <Text style={{ 
