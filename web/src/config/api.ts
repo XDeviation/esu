@@ -79,7 +79,6 @@ api.interceptors.response.use(
         user: user ? JSON.parse(user) : '不存在',
         isGuest: token === "guest",
         isCheckAdmin: error.config?.url === API_ENDPOINTS.CHECK_ADMIN,
-        isPriorKnowledge: error.config?.url === API_ENDPOINTS.PRIOR_KNOWLEDGE,
         requestUrl: error.config?.url,
         timestamp: new Date().toISOString()
       });

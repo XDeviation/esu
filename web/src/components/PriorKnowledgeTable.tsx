@@ -48,7 +48,49 @@ const PriorKnowledgeTable: React.FC = () => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [priors, setPriors] = useState<{ [key: string]: DeckMatchupPrior }>({});
+  const [hasPermission, setHasPermission] = useState(false);
   // const location = useLocation();
+
+  // 检查权限
+  const checkPermission = async () => {
+    console.log('PriorKnowledgeTable - 开始检查权限', {
+      timestamp: new Date().toISOString()
+    });
+    try {
+      const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      console.log('PriorKnowledgeTable - 权限检查响应:', {
+        data: response.data,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (response.data.is_admin || response.data.is_moderator) {
+        console.log('PriorKnowledgeTable - 用户具有权限:', {
+          isAdmin: response.data.is_admin,
+          isModerator: response.data.is_moderator,
+          timestamp: new Date().toISOString()
+        });
+        setHasPermission(true);
+        return true;
+      } else {
+        console.log('PriorKnowledgeTable - 用户没有权限:', {
+          userRole: response.data.role,
+          timestamp: new Date().toISOString()
+        });
+        setHasPermission(false);
+        return false;
+      }
+    } catch (error: any) {
+      console.error('PriorKnowledgeTable - 权限检查失败:', {
+        error,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        timestamp: new Date().toISOString()
+      });
+      setHasPermission(false);
+      return false;
+    }
+  };
 
   // 获取卡组数据
   const fetchDecks = async () => {
@@ -101,6 +143,13 @@ const PriorKnowledgeTable: React.FC = () => {
 
   // 获取先验数据
   const fetchPriorData = async () => {
+    if (!hasPermission) {
+      console.log('PriorKnowledgeTable - 用户没有权限，跳过获取先验数据', {
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
     console.log('PriorKnowledgeTable - 开始获取先验数据', {
       timestamp: new Date().toISOString()
     });
@@ -124,6 +173,17 @@ const PriorKnowledgeTable: React.FC = () => {
         },
         timestamp: new Date().toISOString()
       });
+
+      if (error.response?.status === 401) {
+        console.log('PriorKnowledgeTable - 先验数据接口401，重定向到登录页', {
+          timestamp: new Date().toISOString()
+        });
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return;
+      }
+
       message.error('获取先验数据失败');
     }
   };
@@ -135,6 +195,15 @@ const PriorKnowledgeTable: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
+        // 先检查权限
+        const hasPermission = await checkPermission();
+        if (!hasPermission) {
+          console.log('PriorKnowledgeTable - 用户没有权限，停止加载数据', {
+            timestamp: new Date().toISOString()
+          });
+          return;
+        }
+
         console.log('PriorKnowledgeTable - 开始加载环境数据', {
           timestamp: new Date().toISOString()
         });
