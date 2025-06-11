@@ -32,6 +32,41 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // 添加token和user的监听
+  React.useEffect(() => {
+    const checkStorage = () => {
+      const token = localStorage.getItem("token");
+      const user = localStorage.getItem("user");
+      console.log('AdminRoute - Storage检查:', {
+        token: token ? '存在' : '不存在',
+        user: user ? JSON.parse(user) : '不存在',
+        timestamp: new Date().toISOString()
+      });
+
+      // 如果token或user不存在，且当前不是登录页，则重定向到登录页
+      if ((!token || !user) && location.pathname !== '/login') {
+        console.log('AdminRoute - Storage检查发现认证信息丢失，重定向到登录页', {
+          timestamp: new Date().toISOString()
+        });
+        navigate('/login', { replace: true });
+      }
+    };
+
+    // 初始检查
+    checkStorage();
+
+    // 添加storage事件监听
+    window.addEventListener('storage', checkStorage);
+    
+    // 定期检查（每5秒）
+    const interval = setInterval(checkStorage, 5000);
+
+    return () => {
+      window.removeEventListener('storage', checkStorage);
+      clearInterval(interval);
+    };
+  }, [navigate, location.pathname]);
+
   const checkAdminStatus = React.useCallback(async () => {
     console.log('AdminRoute - 开始检查权限状态...', { 
       hasChecked, 
@@ -100,7 +135,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       }
     } catch (error: any) {
       console.error('AdminRoute - 权限检查失败:', {
-        error: error,
+        error,
         status: error.response?.status,
         statusText: error.response?.statusText,
         data: error.response?.data,
@@ -137,14 +172,14 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   }, [retryCount, hasChecked, navigate, location.pathname]);
 
+  // 只在组件挂载时检查一次权限
   React.useEffect(() => {
-    console.log('AdminRoute - useEffect 触发', { 
+    console.log('AdminRoute - 组件挂载，检查权限', { 
       path: location.pathname,
       timestamp: new Date().toISOString()
     });
-    setHasChecked(false); // 重置检查状态
     checkAdminStatus();
-  }, [checkAdminStatus, location.pathname]);
+  }, [checkAdminStatus]);
 
   console.log('AdminRoute - 渲染状态:', { 
     isAdmin, 
