@@ -194,9 +194,11 @@ const App: React.FC = () => {
             <Route 
               path="prior-knowledge" 
               element={
-                <AdminRoute>
-                  <PriorKnowledgeTable />
-                </AdminRoute>
+                <React.Suspense fallback={<div>加载中...</div>}>
+                  <AdminRoute>
+                    <PriorKnowledgeTable />
+                  </AdminRoute>
+                </React.Suspense>
               } 
             />
             <Route index element={<Navigate to="environments" replace />} />

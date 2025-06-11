@@ -31,6 +31,10 @@ interface DeckMatchupPriorResponse {
 }
 
 const PriorKnowledgeTable: React.FC = () => {
+  console.log('PriorKnowledgeTable - 组件初始化', {
+    timestamp: new Date().toISOString()
+  });
+
   const [decks, setDecks] = useState<Deck[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<number | null>(null);
@@ -48,20 +52,38 @@ const PriorKnowledgeTable: React.FC = () => {
 
   // 获取卡组数据
   const fetchDecks = async () => {
+    console.log('PriorKnowledgeTable - 开始获取卡组数据', {
+      selectedEnvironment,
+      timestamp: new Date().toISOString()
+    });
     try {
       const params = selectedEnvironment ? { environment_id: selectedEnvironment } : {};
       const response = await api.get(API_ENDPOINTS.DECKS, { params });
+      console.log('PriorKnowledgeTable - 获取卡组数据成功', {
+        count: response.data.length,
+        timestamp: new Date().toISOString()
+      });
       setDecks(response.data);
     } catch (error) {
-      console.error('获取卡组数据失败:', error);
+      console.error('PriorKnowledgeTable - 获取卡组数据失败:', {
+        error,
+        timestamp: new Date().toISOString()
+      });
       message.error('获取卡组数据失败');
     }
   };
 
   // 获取环境数据
   const fetchEnvironments = async () => {
+    console.log('PriorKnowledgeTable - 开始获取环境数据', {
+      timestamp: new Date().toISOString()
+    });
     try {
       const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
+      console.log('PriorKnowledgeTable - 获取环境数据成功', {
+        count: response.data.length,
+        timestamp: new Date().toISOString()
+      });
       setEnvironments(response.data);
       // 设置默认选择最后一个环境
       if (response.data.length > 0) {
@@ -69,27 +91,51 @@ const PriorKnowledgeTable: React.FC = () => {
         setSelectedEnvironment(lastEnvironment.id);
       }
     } catch (error) {
-      console.error('获取环境数据失败:', error);
+      console.error('PriorKnowledgeTable - 获取环境数据失败:', {
+        error,
+        timestamp: new Date().toISOString()
+      });
       message.error('获取环境数据失败');
     }
   };
 
   // 获取先验数据
   const fetchPriorData = async () => {
+    console.log('PriorKnowledgeTable - 开始获取先验数据', {
+      timestamp: new Date().toISOString()
+    });
     try {
       const response = await api.get<DeckMatchupPriorResponse>(API_ENDPOINTS.PRIOR_KNOWLEDGE);
+      console.log('PriorKnowledgeTable - 获取先验数据成功', {
+        count: Object.keys(response.data.matchup_priors).length,
+        timestamp: new Date().toISOString()
+      });
       setPriors(response.data.matchup_priors);
     } catch (error) {
-      console.error('获取先验数据失败:', error);
+      console.error('PriorKnowledgeTable - 获取先验数据失败:', {
+        error,
+        timestamp: new Date().toISOString()
+      });
       message.error('获取先验数据失败');
     }
   };
 
   useEffect(() => {
+    console.log('PriorKnowledgeTable - useEffect 触发', {
+      timestamp: new Date().toISOString()
+    });
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchEnvironments(), fetchPriorData()]);
-      setLoading(false);
+      try {
+        await Promise.all([fetchEnvironments(), fetchPriorData()]);
+      } catch (error) {
+        console.error('PriorKnowledgeTable - 加载数据失败:', {
+          error,
+          timestamp: new Date().toISOString()
+        });
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
   }, []);
