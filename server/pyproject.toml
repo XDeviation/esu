@@ -21,6 +21,7 @@ motor = "^3.7.0"
 numpy = "^1.26.4"
 python-jose = {extras = ["cryptography"], version = "^3.5.0"}
 bcrypt = "^4.3.0"
+loguru = "^0.7.3"
 
 
 [build-system]

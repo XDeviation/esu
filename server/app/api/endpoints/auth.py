@@ -13,35 +13,10 @@ from ...core.auth import (
     get_password_hash,
 )
 from ...core.config import config
+from ...core.logger import logger
 from ...models.user import User, UserRole
 from ...db.mongodb import get_database
 from motor.motor_asyncio import AsyncIOMotorDatabase
-import logging
-import os
-from logging.handlers import RotatingFileHandler
-
-# 创建logs目录（如果不存在）
-log_dir = "logs"
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        # 控制台处理器
-        logging.StreamHandler(),
-        # 文件处理器（按大小轮转）
-        RotatingFileHandler(
-            os.path.join(log_dir, 'auth_endpoints.log'),
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5,
-            encoding='utf-8'
-        )
-    ]
-)
-logger = logging.getLogger(__name__)
 
 router = APIRouter()
 

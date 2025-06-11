@@ -43,7 +43,6 @@ const refreshToken = async () => {
     localStorage.setItem("token", access);
     return access;
   } catch (error) {
-    console.error('刷新token失败:', error);
     localStorage.removeItem("token");
     localStorage.removeItem("refresh_token");
     localStorage.removeItem("user");
@@ -62,15 +61,12 @@ const processQueue = (token: string) => {
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
-    console.log('请求拦截器 - 当前token:', token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('请求拦截器 - 设置Authorization头:', config.headers.Authorization);
     }
     return config;
   },
   (error) => {
-    console.error('请求拦截器错误:', error);
     return Promise.reject(error);
   }
 );
@@ -78,55 +74,20 @@ api.interceptors.request.use(
 // 响应拦截器
 api.interceptors.response.use(
   (response) => {
-    console.log('响应拦截器 - 成功响应:', {
-      url: response.config.url,
-      status: response.status,
-      data: response.data,
-      headers: response.headers,
-      timestamp: new Date().toISOString()
-    });
     return response;
   },
   async (error) => {
-    console.error('响应拦截器 - 错误:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      headers: error.response?.headers,
-      config: {
-        method: error.config?.method,
-        headers: error.config?.headers,
-        baseURL: error.config?.baseURL
-      },
-      timestamp: new Date().toISOString()
-    });
-
     const originalRequest = error.config;
 
     if (error.response?.status === 401) {
       const token = localStorage.getItem("token");
       const user = localStorage.getItem("user");
-      console.log('响应拦截器 - 401错误处理:', {
-        token: token ? '存在' : '不存在',
-        user: user ? JSON.parse(user) : '不存在',
-        isGuest: token === "guest",
-        isCheckAdmin: error.config?.url === API_ENDPOINTS.CHECK_ADMIN,
-        requestUrl: error.config?.url,
-        timestamp: new Date().toISOString()
-      });
 
       if (token === "guest") {
-        console.log('游客token，不跳转', {
-          timestamp: new Date().toISOString()
-        });
         return Promise.reject(error);
       }
       
       if (error.config?.url === API_ENDPOINTS.CHECK_ADMIN) {
-        console.log('权限检查接口401，让组件处理', {
-          timestamp: new Date().toISOString()
-        });
         return Promise.reject(error);
       }
 
@@ -143,7 +104,6 @@ api.interceptors.response.use(
             return api(originalRequest);
           } catch (refreshError) {
             isRefreshing = false;
-            console.error('刷新token失败，清除认证信息并跳转:', refreshError);
             localStorage.removeItem("token");
             localStorage.removeItem("refresh_token");
             localStorage.removeItem("user");

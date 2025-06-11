@@ -1,7 +1,6 @@
 import secrets
 import string
 from typing import List
-import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -9,10 +8,10 @@ from pydantic import BaseModel
 from ...db.mongodb import db
 from ...models.match_type import MatchType, MatchTypeCreate
 from ...models.user import UserRole
+from ...core.logger import logger
 from ..deps import get_current_user, get_current_user_or_guest
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
 
 class JoinGroupRequest(BaseModel):

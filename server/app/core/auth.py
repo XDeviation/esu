@@ -5,9 +5,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from ..models.user import UserRole, User
 from .config import config
-import logging
-import os
-from logging.handlers import RotatingFileHandler
+from .logger import logger
 from passlib.context import CryptContext
 
 # 密码加密上下文
@@ -20,29 +18,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """获取密码哈希值"""
     return pwd_context.hash(password)
-
-# 创建logs目录（如果不存在）
-log_dir = "logs"
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        # 控制台处理器
-        logging.StreamHandler(),
-        # 文件处理器（按大小轮转）
-        RotatingFileHandler(
-            os.path.join(log_dir, 'auth.log'),
-            maxBytes=10*1024*1024,  # 10MB
-            backupCount=5,
-            encoding='utf-8'
-        )
-    ]
-)
-logger = logging.getLogger(__name__)
 
 # JWT 相关配置
 SECRET_KEY = "tomato881"  # 在生产环境中应该使用环境变量

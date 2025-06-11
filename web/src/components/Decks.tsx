@@ -64,7 +64,6 @@ const Decks: React.FC = () => {
       const response = await api.get(API_ENDPOINTS.DECKS);
       setDecks(response.data);
     } catch (error) {
-      console.error("获取卡组列表失败:", error);
       message.error("获取卡组列表失败");
     } finally {
       setLoading(false);
@@ -76,7 +75,6 @@ const Decks: React.FC = () => {
       const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
       setEnvironments(response.data);
     } catch (error) {
-      console.error("获取环境列表失败:", error);
       message.error("获取环境列表失败");
     }
   }, [message]);
@@ -136,7 +134,6 @@ const Decks: React.FC = () => {
       message.success("删除成功");
       fetchDecks();
     } catch (error) {
-      console.error("删除失败:", error);
       message.error("删除失败");
     }
   };
@@ -144,14 +141,12 @@ const Decks: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      console.log("表单值:", values);
 
       // 处理卡组构成
       if (values.composition) {
         try {
           values.composition = JSON.parse(values.composition);
         } catch (error) {
-          console.error("JSON 解析错误:", error);
           message.error("卡组构成格式错误，请检查 JSON 格式");
           return;
         }
@@ -164,24 +159,17 @@ const Decks: React.FC = () => {
         return;
       }
 
-      console.log("提交数据:", values);
-
       if (editingDeck) {
         const response = await api.put(
           `${API_ENDPOINTS.DECKS}${editingDeck.id}/`,
           values
         );
-        console.log("更新响应:", response);
-        message.success("更新成功");
       } else {
         const response = await api.post(API_ENDPOINTS.DECKS, values);
-        console.log("创建响应:", response);
-        message.success("创建成功");
       }
       setModalVisible(false);
       fetchDecks();
     } catch (error) {
-      console.error("操作失败:", error);
       message.error("操作失败");
     }
   };

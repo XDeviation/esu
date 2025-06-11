@@ -8,6 +8,7 @@ from ...db.mongodb import get_database
 from ...models.deck import Deck
 from ...models.match_result import MatchResult
 from ...models.win_rate import WinRateCalculationResponse
+from ...models.prior_knowledge import DeckMatchupPrior
 
 router = APIRouter()
 
@@ -53,6 +54,13 @@ async def calculate_win_rates(
     if not match_results:
         raise HTTPException(status_code=404, detail="No match results found")
 
+    # 获取先验数据
+    matchup_priors = {}
+    priors_cursor = db.deck_matchup_priors.find()
+    async for doc in priors_cursor:
+        key = f"{doc['deck_a_id']}_{doc['deck_b_id']}"
+        matchup_priors[key] = DeckMatchupPrior(**doc)
+
     # 创建计算器实例
     calculator = WinRateCalculator(sensitivity=sensitivity)
 
@@ -61,6 +69,7 @@ async def calculate_win_rates(
         decks=decks,
         match_results=match_results,
         environment_offsets=None,
+        matchup_priors=matchup_priors,
     )
 
     return WinRateCalculationResponse(
