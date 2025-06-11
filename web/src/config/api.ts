@@ -50,7 +50,9 @@ api.interceptors.response.use(
     console.log('响应拦截器 - 成功响应:', {
       url: response.config.url,
       status: response.status,
-      data: response.data
+      data: response.data,
+      headers: response.headers,
+      timestamp: new Date().toISOString()
     });
     return response;
   },
@@ -59,29 +61,46 @@ api.interceptors.response.use(
       url: error.config?.url,
       status: error.response?.status,
       statusText: error.response?.statusText,
-      data: error.response?.data
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: {
+        method: error.config?.method,
+        headers: error.config?.headers,
+        baseURL: error.config?.baseURL
+      },
+      timestamp: new Date().toISOString()
     });
 
     if (error.response?.status === 401) {
       const token = localStorage.getItem("token");
+      const user = localStorage.getItem("user");
       console.log('响应拦截器 - 401错误处理:', {
-        token,
+        token: token ? '存在' : '不存在',
+        user: user ? JSON.parse(user) : '不存在',
         isGuest: token === "guest",
-        isCheckAdmin: error.config?.url === API_ENDPOINTS.CHECK_ADMIN
+        isCheckAdmin: error.config?.url === API_ENDPOINTS.CHECK_ADMIN,
+        timestamp: new Date().toISOString()
       });
 
       if (token === "guest") {
-        console.log('游客token，不跳转');
+        console.log('游客token，不跳转', {
+          timestamp: new Date().toISOString()
+        });
         return Promise.reject(error);
       }
       
       if (error.config?.url === API_ENDPOINTS.CHECK_ADMIN) {
-        console.log('权限检查接口401，让组件处理');
+        console.log('权限检查接口401，让组件处理', {
+          timestamp: new Date().toISOString()
+        });
         return Promise.reject(error);
       }
       
-      console.log('其他接口401，清除token并跳转');
+      console.log('其他接口401，清除token并跳转', {
+        timestamp: new Date().toISOString()
+      });
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       window.location.href = "/login";
     }
     return Promise.reject(error);
