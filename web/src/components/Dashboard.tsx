@@ -36,7 +36,7 @@ const Dashboard: React.FC = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    window.location.href = "/login";
+    navigate('/login', { replace: true });
   };
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -48,17 +48,25 @@ const Dashboard: React.FC = () => {
   const checkAdminStatus = async () => {
     try {
       const response = await api.get(API_ENDPOINTS.CHECK_ADMIN);
+      console.log('Dashboard - 权限检查响应:', response.data);
       setIsAdmin(response.data.is_admin);
       setIsModerator(response.data.is_moderator);
-    } catch {
+    } catch (error) {
+      console.error('Dashboard - 权限检查失败:', error);
       setIsAdmin(false);
       setIsModerator(false);
     }
   };
 
   useEffect(() => {
+    console.log('Dashboard - 组件挂载，检查权限');
     checkAdminStatus();
   }, []);
+
+  // 监听路由变化
+  useEffect(() => {
+    console.log('Dashboard - 路由变化:', location.pathname);
+  }, [location.pathname]);
 
   const menuItems = [
     {
@@ -104,6 +112,7 @@ const Dashboard: React.FC = () => {
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {
+    console.log('Dashboard - 菜单点击:', key);
     navigate(key);
     setDrawerVisible(false);
   };
