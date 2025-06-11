@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
 from ..models.user import UserRole
-from ...core.config import config
+from .config import config
 import logging
 import os
 from logging.handlers import RotatingFileHandler
