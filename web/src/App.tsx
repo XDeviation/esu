@@ -191,8 +191,10 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     timestamp: new Date().toISOString()
   });
 
-  if (loading) {
+  if (loading || !hasChecked) {
     console.log('AdminRoute - 显示加载状态', {
+      loading,
+      hasChecked,
       timestamp: new Date().toISOString()
     });
     return <div>加载中...</div>;

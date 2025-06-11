@@ -135,11 +135,15 @@ const PriorKnowledgeTable: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        console.log('PriorKnowledgeTable - 开始并行加载数据', {
+        console.log('PriorKnowledgeTable - 开始加载环境数据', {
           timestamp: new Date().toISOString()
         });
-        await Promise.all([fetchEnvironments(), fetchPriorData()]);
-        console.log('PriorKnowledgeTable - 数据加载完成', {
+        await fetchEnvironments();
+        console.log('PriorKnowledgeTable - 环境数据加载完成，开始加载先验数据', {
+          timestamp: new Date().toISOString()
+        });
+        await fetchPriorData();
+        console.log('PriorKnowledgeTable - 所有数据加载完成', {
           timestamp: new Date().toISOString()
         });
       } catch (error: any) {
