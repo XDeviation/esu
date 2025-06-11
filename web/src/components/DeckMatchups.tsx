@@ -11,10 +11,6 @@ import {
   Col,
   Space,
   Tooltip,
-  Modal,
-  Form,
-  InputNumber,
-  Button,
   Switch,
 } from "antd";
 import api from "../config/api";
