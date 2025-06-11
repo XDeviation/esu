@@ -55,13 +55,22 @@ const Login: React.FC = () => {
         },
       });
 
+      // 解码 token 获取用户信息
+      const tokenPayload = JSON.parse(atob(response.data.access_token.split('.')[1]));
+      console.log('Token payload:', tokenPayload);
+
+      // 获取用户角色
+      const userRole = tokenPayload.role;
+      console.log('User role from token:', userRole);
+
       localStorage.setItem("token", response.data.access_token);
+      localStorage.setItem("refresh_token", response.data.refresh_token);
       localStorage.setItem(
         "user",
         JSON.stringify({
           email: values.username,
-          name: response.data.name || values.username,
-          role: response.data.role || "player"
+          name: values.username.split('@')[0],
+          role: userRole  // 直接使用 token 中的角色
         })
       );
       message.success("登录成功！");

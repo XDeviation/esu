@@ -3,11 +3,23 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from typing import Optional
-from ..models.user import UserRole
+from ..models.user import UserRole, User
 from .config import config
 import logging
 import os
 from logging.handlers import RotatingFileHandler
+from passlib.context import CryptContext
+
+# 密码加密上下文
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    """获取密码哈希值"""
+    return pwd_context.hash(password)
 
 # 创建logs目录（如果不存在）
 log_dir = "logs"
@@ -46,7 +58,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, config["jwt"]["secret_key"], algorithm=config["jwt"]["algorithm"])
+    return encoded_jwt
+
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=30)  # 刷新token默认30天过期
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, config["jwt"]["refresh_secret_key"], algorithm=config["jwt"]["algorithm"])
     return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -77,17 +99,24 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
                 headers={"WWW-Authenticate": "Bearer"},
             )
             
-        user_id = payload.get("sub")
-        if user_id is None:
-            logger.error('Token中没有用户ID')
+        email = payload.get("sub")
+        if email is None:
+            logger.error('Token中没有用户邮箱')
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token无效",
                 headers={"WWW-Authenticate": "Bearer"},
             )
             
-        logger.info(f'Token验证成功，用户ID: {user_id}')
-        return {"id": user_id, "role": payload.get("role", UserRole.PLAYER)}
+        logger.info(f'Token验证成功，用户邮箱: {email}')
+        return User(
+            id=email,
+            email=email,
+            name=email.split('@')[0],  # 临时使用邮箱前缀作为用户名
+            role=payload.get("role", UserRole.PLAYER),
+            created_at=datetime.utcnow(),  # 这些字段在验证时并不重要
+            updated_at=datetime.utcnow()
+        )
         
     except jwt.PyJWTError as e:
         logger.error(f'Token验证失败: {str(e)}')
@@ -97,21 +126,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-async def get_current_admin_or_moderator(current_user: dict = Depends(get_current_user)):
+async def get_current_admin_or_moderator(current_user: User = Depends(get_current_user)):
     logger.info(f'检查管理员/版主权限: {current_user}')
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.MODERATOR]:
-        logger.error(f'权限不足: {current_user["role"]}')
+    if current_user.role not in [UserRole.ADMIN, UserRole.MODERATOR]:
+        logger.error(f'权限不足: {current_user.role}')
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="需要管理员或版主权限"
         )
-    logger.info(f'权限验证通过: {current_user["role"]}')
+    logger.info(f'权限验证通过: {current_user.role}')
     return current_user
 
-async def get_current_admin(current_user: dict = Depends(get_current_user)):
+async def get_current_admin(current_user: User = Depends(get_current_user)):
     logger.info(f'检查管理员权限: {current_user}')
-    if current_user["role"] != UserRole.ADMIN:
-        logger.error(f'权限不足: {current_user["role"]}')
+    if current_user.role != UserRole.ADMIN:
+        logger.error(f'权限不足: {current_user.role}')
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="需要管理员权限"
@@ -119,10 +148,10 @@ async def get_current_admin(current_user: dict = Depends(get_current_user)):
     logger.info('管理员权限验证通过')
     return current_user
 
-async def get_current_moderator(current_user: dict = Depends(get_current_user)):
+async def get_current_moderator(current_user: User = Depends(get_current_user)):
     logger.info(f'检查版主权限: {current_user}')
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.MODERATOR]:
-        logger.error(f'权限不足: {current_user["role"]}')
+    if current_user.role not in [UserRole.ADMIN, UserRole.MODERATOR]:
+        logger.error(f'权限不足: {current_user.role}')
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="需要版主权限"
@@ -130,20 +159,41 @@ async def get_current_moderator(current_user: dict = Depends(get_current_user)):
     logger.info('版主权限验证通过')
     return current_user
 
-async def get_current_user_or_guest(current_user: Optional[dict] = Depends(get_current_user)):
+async def get_current_user_or_guest(current_user: Optional[User] = Depends(get_current_user)):
     logger.info(f'检查用户或游客权限: {current_user}')
     if current_user is None:
         logger.info('返回游客权限')
-        return {"role": UserRole.GUEST}
+        return User(
+            id="guest",
+            email="guest@example.com",
+            name="游客",
+            role=UserRole.GUEST,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
     return current_user
 
-async def get_current_user_or_moderator(current_user: Optional[dict] = Depends(get_current_user)):
+async def get_current_user_or_moderator(current_user: Optional[User] = Depends(get_current_user)):
     logger.info(f'检查用户或版主权限: {current_user}')
     if current_user is None:
         logger.info('返回游客权限')
-        return {"role": UserRole.GUEST}
-    if current_user.get("role") in [UserRole.ADMIN, UserRole.MODERATOR]:
-        logger.info(f'返回版主权限: {current_user["role"]}')
+        return User(
+            id="guest",
+            email="guest@example.com",
+            name="游客",
+            role=UserRole.GUEST,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+    if current_user.role in [UserRole.ADMIN, UserRole.MODERATOR]:
+        logger.info(f'返回版主权限: {current_user.role}')
         return current_user
     logger.info('返回普通用户权限')
-    return {"role": UserRole.PLAYER} 
+    return User(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        role=UserRole.PLAYER,
+        created_at=current_user.created_at,
+        updated_at=current_user.updated_at
+    ) 
