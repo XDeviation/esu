@@ -49,10 +49,18 @@ const PriorKnowledgeTable: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [priors, setPriors] = useState<{ [key: string]: DeckMatchupPrior }>({});
   const [hasPermission, setHasPermission] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   // const location = useLocation();
 
   // 检查权限
   const checkPermission = async () => {
+    if (isInitialized) {
+      console.log('PriorKnowledgeTable - 已经初始化，跳过权限检查', {
+        timestamp: new Date().toISOString()
+      });
+      return hasPermission;
+    }
+
     console.log('PriorKnowledgeTable - 开始检查权限', {
       timestamp: new Date().toISOString()
     });
@@ -70,6 +78,7 @@ const PriorKnowledgeTable: React.FC = () => {
           timestamp: new Date().toISOString()
         });
         setHasPermission(true);
+        setIsInitialized(true);
         return true;
       } else {
         console.log('PriorKnowledgeTable - 用户没有权限:', {
@@ -77,6 +86,7 @@ const PriorKnowledgeTable: React.FC = () => {
           timestamp: new Date().toISOString()
         });
         setHasPermission(false);
+        setIsInitialized(true);
         return false;
       }
     } catch (error: any) {
@@ -88,103 +98,8 @@ const PriorKnowledgeTable: React.FC = () => {
         timestamp: new Date().toISOString()
       });
       setHasPermission(false);
+      setIsInitialized(true);
       return false;
-    }
-  };
-
-  // 获取卡组数据
-  const fetchDecks = async () => {
-    console.log('PriorKnowledgeTable - 开始获取卡组数据', {
-      selectedEnvironment,
-      timestamp: new Date().toISOString()
-    });
-    try {
-      const params = selectedEnvironment ? { environment_id: selectedEnvironment } : {};
-      const response = await api.get(API_ENDPOINTS.DECKS, { params });
-      console.log('PriorKnowledgeTable - 获取卡组数据成功', {
-        count: response.data.length,
-        timestamp: new Date().toISOString()
-      });
-      setDecks(response.data);
-    } catch (error) {
-      console.error('PriorKnowledgeTable - 获取卡组数据失败:', {
-        error,
-        timestamp: new Date().toISOString()
-      });
-      message.error('获取卡组数据失败');
-    }
-  };
-
-  // 获取环境数据
-  const fetchEnvironments = async () => {
-    console.log('PriorKnowledgeTable - 开始获取环境数据', {
-      timestamp: new Date().toISOString()
-    });
-    try {
-      const response = await api.get(API_ENDPOINTS.ENVIRONMENTS);
-      console.log('PriorKnowledgeTable - 获取环境数据成功', {
-        count: response.data.length,
-        timestamp: new Date().toISOString()
-      });
-      setEnvironments(response.data);
-      // 设置默认选择最后一个环境
-      if (response.data.length > 0) {
-        const lastEnvironment = response.data[response.data.length - 1];
-        setSelectedEnvironment(lastEnvironment.id);
-      }
-    } catch (error) {
-      console.error('PriorKnowledgeTable - 获取环境数据失败:', {
-        error,
-        timestamp: new Date().toISOString()
-      });
-      message.error('获取环境数据失败');
-    }
-  };
-
-  // 获取先验数据
-  const fetchPriorData = async () => {
-    if (!hasPermission) {
-      console.log('PriorKnowledgeTable - 用户没有权限，跳过获取先验数据', {
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-
-    console.log('PriorKnowledgeTable - 开始获取先验数据', {
-      timestamp: new Date().toISOString()
-    });
-    try {
-      const response = await api.get<DeckMatchupPriorResponse>(API_ENDPOINTS.PRIOR_KNOWLEDGE);
-      console.log('PriorKnowledgeTable - 获取先验数据成功', {
-        count: Object.keys(response.data.matchup_priors).length,
-        timestamp: new Date().toISOString()
-      });
-      setPriors(response.data.matchup_priors);
-    } catch (error: any) {
-      console.error('PriorKnowledgeTable - 获取先验数据失败:', {
-        error,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          headers: error.config?.headers,
-          method: error.config?.method
-        },
-        timestamp: new Date().toISOString()
-      });
-
-      if (error.response?.status === 401) {
-        console.log('PriorKnowledgeTable - 先验数据接口401，重定向到登录页', {
-          timestamp: new Date().toISOString()
-        });
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        window.location.href = "/login";
-        return;
-      }
-
-      message.error('获取先验数据失败');
     }
   };
 
@@ -193,6 +108,13 @@ const PriorKnowledgeTable: React.FC = () => {
       timestamp: new Date().toISOString()
     });
     const loadData = async () => {
+      if (isInitialized) {
+        console.log('PriorKnowledgeTable - 已经初始化，跳过数据加载', {
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
       setLoading(true);
       try {
         // 先检查权限
@@ -201,17 +123,39 @@ const PriorKnowledgeTable: React.FC = () => {
           console.log('PriorKnowledgeTable - 用户没有权限，停止加载数据', {
             timestamp: new Date().toISOString()
           });
+          setLoading(false);
           return;
         }
 
-        console.log('PriorKnowledgeTable - 开始加载环境数据', {
+        // 权限检查通过后，开始加载数据
+        console.log('PriorKnowledgeTable - 权限检查通过，开始加载数据', {
           timestamp: new Date().toISOString()
         });
-        await fetchEnvironments();
-        console.log('PriorKnowledgeTable - 环境数据加载完成，开始加载先验数据', {
+
+        // 并行加载环境和先验数据
+        const [environmentsResponse, priorDataResponse] = await Promise.all([
+          api.get(API_ENDPOINTS.ENVIRONMENTS),
+          api.get<DeckMatchupPriorResponse>(API_ENDPOINTS.PRIOR_KNOWLEDGE)
+        ]);
+
+        // 处理环境数据
+        console.log('PriorKnowledgeTable - 获取环境数据成功', {
+          count: environmentsResponse.data.length,
           timestamp: new Date().toISOString()
         });
-        await fetchPriorData();
+        setEnvironments(environmentsResponse.data);
+        if (environmentsResponse.data.length > 0) {
+          const lastEnvironment = environmentsResponse.data[environmentsResponse.data.length - 1];
+          setSelectedEnvironment(lastEnvironment.id);
+        }
+
+        // 处理先验数据
+        console.log('PriorKnowledgeTable - 获取先验数据成功', {
+          count: Object.keys(priorDataResponse.data.matchup_priors).length,
+          timestamp: new Date().toISOString()
+        });
+        setPriors(priorDataResponse.data.matchup_priors);
+
         console.log('PriorKnowledgeTable - 所有数据加载完成', {
           timestamp: new Date().toISOString()
         });
@@ -228,18 +172,74 @@ const PriorKnowledgeTable: React.FC = () => {
           },
           timestamp: new Date().toISOString()
         });
+
+        if (error.response?.status === 401) {
+          console.log('PriorKnowledgeTable - 数据加载遇到401错误，重定向到登录页', {
+            timestamp: new Date().toISOString()
+          });
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login";
+          return;
+        }
+
+        message.error('加载数据失败');
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
+  }, [isInitialized]);
+
+  // 获取卡组数据
+  const fetchDecks = async () => {
+    if (!hasPermission) {
+      console.log('PriorKnowledgeTable - 用户没有权限，跳过获取卡组数据', {
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
+    console.log('PriorKnowledgeTable - 开始获取卡组数据', {
+      selectedEnvironment,
+      timestamp: new Date().toISOString()
+    });
+    try {
+      const params = selectedEnvironment ? { environment_id: selectedEnvironment } : {};
+      const response = await api.get(API_ENDPOINTS.DECKS, { params });
+      console.log('PriorKnowledgeTable - 获取卡组数据成功', {
+        count: response.data.length,
+        timestamp: new Date().toISOString()
+      });
+      setDecks(response.data);
+    } catch (error: any) {
+      console.error('PriorKnowledgeTable - 获取卡组数据失败:', {
+        error,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        timestamp: new Date().toISOString()
+      });
+
+      if (error.response?.status === 401) {
+        console.log('PriorKnowledgeTable - 获取卡组数据遇到401错误，重定向到登录页', {
+          timestamp: new Date().toISOString()
+        });
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+        return;
+      }
+
+      message.error('获取卡组数据失败');
+    }
+  };
 
   useEffect(() => {
-    if (selectedEnvironment) {
+    if (selectedEnvironment && hasPermission && !loading) {
       fetchDecks();
     }
-  }, [selectedEnvironment]);
+  }, [selectedEnvironment, hasPermission, loading]);
 
   // 生成表格数据
   const getTableData = () => {
@@ -403,7 +403,7 @@ const PriorKnowledgeTable: React.FC = () => {
       message.success('先验数据保存成功');
       setModalVisible(false);
       // 重新加载数据
-      await fetchPriorData();
+      await fetchDecks();
     } catch (error) {
       console.error('保存先验数据失败:', error);
       message.error('保存先验数据失败');
