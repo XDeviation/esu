@@ -111,9 +111,17 @@ const PriorKnowledgeTable: React.FC = () => {
         timestamp: new Date().toISOString()
       });
       setPriors(response.data.matchup_priors);
-    } catch (error) {
+    } catch (error: any) {
       console.error('PriorKnowledgeTable - 获取先验数据失败:', {
         error,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          headers: error.config?.headers,
+          method: error.config?.method
+        },
         timestamp: new Date().toISOString()
       });
       message.error('获取先验数据失败');
@@ -127,10 +135,24 @@ const PriorKnowledgeTable: React.FC = () => {
     const loadData = async () => {
       setLoading(true);
       try {
+        console.log('PriorKnowledgeTable - 开始并行加载数据', {
+          timestamp: new Date().toISOString()
+        });
         await Promise.all([fetchEnvironments(), fetchPriorData()]);
-      } catch (error) {
+        console.log('PriorKnowledgeTable - 数据加载完成', {
+          timestamp: new Date().toISOString()
+        });
+      } catch (error: any) {
         console.error('PriorKnowledgeTable - 加载数据失败:', {
           error,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: {
+            url: error.config?.url,
+            headers: error.config?.headers,
+            method: error.config?.method
+          },
           timestamp: new Date().toISOString()
         });
       } finally {
