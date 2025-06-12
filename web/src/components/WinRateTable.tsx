@@ -10,6 +10,8 @@ import {
   Row,
   Col,
   Space,
+  InputNumber,
+  Tooltip,
 } from "antd";
 import api from "../config/api";
 import { useLocation } from "react-router-dom";
@@ -54,8 +56,16 @@ const WinRateTable: React.FC = () => {
   >();
   const [selectedMatchType, setSelectedMatchType] = useState<string>("");
   const [sensitivity, setSensitivity] = useState<number>(30.0);
+  const [priorWeight, setPriorWeight] = useState<number>(1.0);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const location = useLocation();
+
+  // 检查用户权限
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    setIsAdmin(user.role === 'admin' || user.role === 'moderator');
+  }, []);
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -103,6 +113,7 @@ const WinRateTable: React.FC = () => {
     try {
       const params = new URLSearchParams();
       params.append("sensitivity", sensitivity.toString());
+      params.append("prior_weight", priorWeight.toString());
       if (selectedMatchType) {
         params.append("match_type_id", selectedMatchType);
       }
@@ -119,7 +130,7 @@ const WinRateTable: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [sensitivity, selectedMatchType, selectedEnvironment]);
+  }, [sensitivity, priorWeight, selectedMatchType, selectedEnvironment]);
 
   useEffect(() => {
     if (location.pathname === "/win-rate-table") {
@@ -131,7 +142,7 @@ const WinRateTable: React.FC = () => {
 
   useEffect(() => {
     fetchWinRates();
-  }, [sensitivity, selectedMatchType, selectedEnvironment, fetchWinRates]);
+  }, [sensitivity, priorWeight, selectedMatchType, selectedEnvironment, fetchWinRates]);
 
   interface TableRecord {
     deck_id: number;
@@ -257,6 +268,20 @@ const WinRateTable: React.FC = () => {
                     ))}
                   </Select>
                 </Col>
+                {isAdmin && (
+                  <Col xs={24} sm={12} md={8}>
+                    <Tooltip title="先验数据权重系数（0.1-10.0）">
+                      <InputNumber
+                        min={0.1}
+                        max={10}
+                        step={0.1}
+                        value={priorWeight}
+                        onChange={(value) => setPriorWeight(value || 1)}
+                        addonBefore="先验权重"
+                      />
+                    </Tooltip>
+                  </Col>
+                )}
               </Row>
             </Space>
           </Col>

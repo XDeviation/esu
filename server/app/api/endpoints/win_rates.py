@@ -16,6 +16,7 @@ router = APIRouter()
 @router.get("/calculate", response_model=WinRateCalculationResponse)
 async def calculate_win_rates(
     sensitivity: float = Query(30.0, description="环境功利指数（1.0-100.0）"),
+    prior_weight: float = Query(1.0, description="先验数据权重系数（0.1-10.0）"),
     environment_id: Optional[int] = Query(None, description="环境ID"),
     match_type_id: Optional[int] = Query(None, description="比赛类型ID"),
     db: AsyncIOMotorDatabase = Depends(get_database),
@@ -24,6 +25,7 @@ async def calculate_win_rates(
     计算所有卡组的胜率
 
     - **sensitivity**: 环境功利指数（1.0-100.0）
+    - **prior_weight**: 先验数据权重系数（0.1-10.0）
     - **environment_id**: 可选的环境ID
     - **match_type_id**: 可选的比赛类型ID
     """
@@ -62,7 +64,7 @@ async def calculate_win_rates(
         matchup_priors[key] = DeckMatchupPrior(**doc)
 
     # 创建计算器实例
-    calculator = WinRateCalculator(sensitivity=sensitivity)
+    calculator = WinRateCalculator(sensitivity=sensitivity, prior_weight=prior_weight)
 
     # 计算胜率
     calculations = calculator.calculate_final_win_rates(
