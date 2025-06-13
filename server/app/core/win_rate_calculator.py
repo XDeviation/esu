@@ -146,12 +146,18 @@ class WinRateCalculator:
                 total_wins += (prior.prior_matches - prior.prior_wins) * self.prior_weight
             
             # 计算后验胜率
-            win_rate = total_wins / total_matches if total_matches > 0 else 0
+            if total_matches > 0:
+                win_rate = total_wins / total_matches
+            else:
+                # 如果没有数据，使用默认胜率0.5
+                win_rate = 0.5
+                # 对于没有数据的对局，降低其权重
+                weight *= 0.1
 
             total_weight += weight
             weighted_sum += weight * win_rate
 
-        return weighted_sum / total_weight if total_weight > 0 else 0
+        return weighted_sum / total_weight if total_weight > 0 else 0.5
 
     def calculate_final_win_rates(
         self,
