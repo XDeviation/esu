@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Card, Typography, Modal, Select, Space, Form, InputNumber, Button, message, Tooltip } from 'antd';
+import { Table, Card, Typography, Modal, Select, Space, Form, InputNumber, Button, message, Tooltip, Row, Col } from 'antd';
 import type { TableProps } from 'antd';
 import api from '../config/api';
 import { API_ENDPOINTS } from '../config/api';
@@ -202,7 +202,7 @@ const PriorKnowledgeTable: React.FC = () => {
         dataIndex: 'deck',
         key: 'deck',
         fixed: 'left',
-        width: 200,
+        width: 120,
         render: (deck: Deck) => deck.name,
         ellipsis: true,
       },
@@ -210,7 +210,7 @@ const PriorKnowledgeTable: React.FC = () => {
         title: deck.name,
         dataIndex: deck.id,
         key: deck.id,
-        width: 150,
+        width: 120,
         render: (value: any) => {
           if (!value) return null;
           const { prior } = value;
@@ -311,31 +311,40 @@ const PriorKnowledgeTable: React.FC = () => {
   };
 
   return (
-    <Card>
+    <Card bodyStyle={{ padding: '12px' }}>
       <Space direction="vertical" style={{ width: '100%' }}>
-        <Space>
-          <Title level={4}>梯度表-先验数据</Title>
-          <Tooltip title="为了使得梯度表中，对于少样本对局的胜率估计更准确，增设本页面。请填入大家认为的各个对局的优劣情况。若是十分确定本对局的优劣情况，总局数填10或以上。否则填10。修改前请咨询881小团体意见。谢谢配合。">
-            <QuestionCircleOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
-          </Tooltip>
-          <Select
-            style={{ width: 200 }}
-            placeholder="选择环境"
-            value={selectedEnvironment}
-            onChange={setSelectedEnvironment}
-            options={environments.map(env => ({
-              label: env.name,
-              value: env.id
-            }))}
+        <Row gutter={[8, 8]} align="middle">
+          <Col xs={24} sm={24} md={12} lg={12}>
+            <Space>
+              <Title level={4} style={{ margin: 0 }}>梯度表-先验数据</Title>
+              <Tooltip title="为了使得梯度表中，对于少样本对局的胜率估计更准确，增设本页面。请填入大家认为的各个对局的优劣情况。若是十分确定本对局的优劣情况，总局数填10或以上。否则填10。修改前请咨询881小团体意见。谢谢配合。">
+                <QuestionCircleOutlined style={{ color: '#1890ff', fontSize: '16px' }} />
+              </Tooltip>
+            </Space>
+          </Col>
+          <Col xs={24} sm={24} md={12} lg={12}>
+            <Select
+              style={{ width: '100%' }}
+              placeholder="选择环境"
+              value={selectedEnvironment}
+              onChange={setSelectedEnvironment}
+              options={environments.map(env => ({
+                label: env.name,
+                value: env.id
+              }))}
+            />
+          </Col>
+        </Row>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <Table
+            columns={getColumns()}
+            dataSource={getTableData()}
+            loading={loading}
+            scroll={{ x: 'max-content' }}
+            pagination={false}
+            size="small"
           />
-        </Space>
-        <Table
-          columns={getColumns()}
-          dataSource={getTableData()}
-          loading={loading}
-          scroll={{ x: 'max-content' }}
-          pagination={false}
-        />
+        </div>
       </Space>
 
       <Modal
@@ -343,6 +352,8 @@ const PriorKnowledgeTable: React.FC = () => {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={null}
+        width="90%"
+        style={{ maxWidth: '500px' }}
       >
         <Form
           form={form}
