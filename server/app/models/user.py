@@ -18,7 +18,9 @@ class UserBase(BaseModel):
     role: UserRole = UserRole.PLAYER  # 默认为普通玩家
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
+    email: EmailStr
+    name: str
     password: str
 
 

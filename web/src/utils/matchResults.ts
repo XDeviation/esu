@@ -1,5 +1,6 @@
 import api, { API_ENDPOINTS } from "../config/api";
 import { message } from "antd";
+import { AxiosError } from "axios";
 
 interface BatchMatch {
   first_player: "first" | "second";
@@ -44,13 +45,58 @@ export const handleBatchSubmit = async (values: BatchSubmitValues) => {
       };
     });
 
-    await api.post(`${API_ENDPOINTS.MATCH_RESULTS}batch/`, {
+    await api.post(`${API_ENDPOINTS.MATCH_RESULTS}batch`, {
       match_results: matchResults,
     });
-    message.success("添加成功");
+    message.success("批量导入成功");
     return true;
-  } catch {
-    message.error("添加失败");
+  } catch (error) {
+    console.error('批量导入失败:', error);
+    
+    try {
+      if (error instanceof AxiosError && error.response?.data) {
+        const errorData = error.response.data;
+        let errorMessage = "批量导入失败";
+
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.non_field_errors) {
+          errorMessage = errorData.non_field_errors[0];
+        } else {
+          // 处理字段错误
+          const fieldErrors = Object.entries(errorData)
+            .map(([field, errors]) => {
+              try {
+                if (Array.isArray(errors)) {
+                  return `${field}: ${errors[0]}`;
+                } else if (typeof errors === 'object' && errors !== null) {
+                  // 处理嵌套的错误对象
+                  if ('msg' in errors) {
+                    return `${field}: ${errors.msg}`;
+                  }
+                  return `${field}: ${JSON.stringify(errors)}`;
+                }
+                return `${field}: ${String(errors)}`;
+              } catch (e) {
+                console.error('处理错误信息失败:', e);
+                return `${field}: 未知错误`;
+              }
+            })
+            .filter(Boolean)
+            .join('\n');
+          errorMessage = fieldErrors || "批量导入失败";
+        }
+
+        message.error(errorMessage);
+      } else {
+        message.error("批量导入失败，请稍后重试");
+      }
+    } catch (e) {
+      console.error('处理错误失败:', e);
+      message.error("批量导入失败，请稍后重试");
+    }
     return false;
   }
 }; 

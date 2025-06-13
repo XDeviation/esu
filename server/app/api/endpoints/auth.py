@@ -14,7 +14,7 @@ from ...core.auth import (
 )
 from ...core.config import config
 from ...core.logger import logger
-from ...models.user import User, UserRole
+from ...models.user import User, UserRole, UserCreate
 from ...db.mongodb import get_database
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -128,3 +128,32 @@ async def check_admin(current_user: User = Depends(get_current_user_or_guest)):
         "user_id": current_user.id,
         "is_guest": current_user.role == UserRole.GUEST
     }
+
+@router.post("/register/", response_model=User)
+async def register_user(
+    user_data: UserCreate,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    logger.info(f'开始注册用户: {user_data.email}')
+    
+    # 检查邮箱是否已存在
+    if await db.users.find_one({"email": user_data.email}):
+        logger.error(f'邮箱已存在: {user_data.email}')
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="该邮箱已被注册"
+        )
+    
+    # 创建新用户
+    user_dict = user_data.model_dump()
+    user_dict["hashed_password"] = get_password_hash(user_dict.pop("password"))
+    user_dict["created_at"] = datetime.utcnow()
+    user_dict["updated_at"] = datetime.utcnow()
+    user_dict["role"] = UserRole.PLAYER  # 默认为普通玩家
+    user_dict["id"] = user_data.email  # 使用邮箱作为ID
+    
+    # 插入用户数据
+    await db.users.insert_one(user_dict)
+    
+    logger.info(f'用户注册成功: {user_data.email}')
+    return User(**user_dict)

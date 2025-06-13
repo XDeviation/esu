@@ -9,14 +9,12 @@ import {
 import { App as AntApp } from "antd";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
-import Environments from "./components/Environments";
-import Decks from "./components/Decks";
+import AdminPanel from "./components/AdminPanel";
 import MatchTypes from "./components/MatchTypes";
 import MatchResults from "./components/MatchResults";
 import Statistics from "./components/Statistics";
 import DeckMatchups from "./components/DeckMatchups";
 import WinRateTable from "./components/WinRateTable";
-import PriorKnowledgeTable from './components/PriorKnowledgeTable';
 import api from "./config/api";
 import { API_ENDPOINTS } from "./config/api";
 import "./App.css";
@@ -92,24 +90,19 @@ const App: React.FC = () => {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />}>
-            <Route path="environments" element={<Environments />} />
-            <Route path="decks" element={<Decks />} />
+            <Route path="admin" element={
+              <React.Suspense fallback={<div>加载中...</div>}>
+                <AdminRoute>
+                  <AdminPanel />
+                </AdminRoute>
+              </React.Suspense>
+            } />
             <Route path="match-types" element={<MatchTypes />} />
             <Route path="match-results" element={<MatchResults />} />
             <Route path="statistics" element={<Statistics />} />
             <Route path="deck-matchups" element={<DeckMatchups />} />
             <Route path="win-rate-table" element={<WinRateTable />} />
-            <Route 
-              path="prior-knowledge" 
-              element={
-                <React.Suspense fallback={<div>加载中...</div>}>
-                  <AdminRoute>
-                    <PriorKnowledgeTable />
-                  </AdminRoute>
-                </React.Suspense>
-              } 
-            />
-            <Route index element={<Navigate to="environments" replace />} />
+            <Route index element={<Navigate to="match-types" replace />} />
           </Route>
         </Routes>
       </Router>

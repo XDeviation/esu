@@ -1,6 +1,7 @@
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
 import { BatchMatch } from "../types";
+import { message } from "antd";
 
 export const submitBatchMatch = async (values: {
   environment_id: number;
@@ -39,12 +40,13 @@ export const submitBatchMatch = async (values: {
       };
     });
 
-    await api.post(`${API_ENDPOINTS.MATCH_RESULTS}batch/`, {
+    await api.post(`${API_ENDPOINTS.MATCH_RESULTS}batch`, {
       match_results: matchResults,
     });
+    message.success("批量导入成功");
     return true;
   } catch (error) {
-    console.error("提交对战记录失败:", error);
+    message.error("批量导入失败");
     return false;
   }
 }; 

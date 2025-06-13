@@ -15,7 +15,6 @@ import type { TableProps } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
-import { useLocation } from "react-router-dom";
 
 interface Environment {
   id: number;
@@ -30,7 +29,6 @@ const Environments: React.FC = () => {
     useState<Environment | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [form] = Form.useForm();
-  const location = useLocation();
   const { message } = App.useApp();
 
   const fetchEnvironments = useCallback(async () => {
@@ -54,13 +52,10 @@ const Environments: React.FC = () => {
     }
   }, []);
 
-  // 监听路由变化
   useEffect(() => {
-    if (location.pathname === "/environments") {
-      fetchEnvironments();
-      checkAdminStatus();
-    }
-  }, [location.pathname, fetchEnvironments, checkAdminStatus]);
+    fetchEnvironments();
+    checkAdminStatus();
+  }, [fetchEnvironments, checkAdminStatus]);
 
   const handleCreate = () => {
     if (!isAdmin) {
@@ -88,7 +83,7 @@ const Environments: React.FC = () => {
       return;
     }
     try {
-      await api.delete(`${API_ENDPOINTS.ENVIRONMENTS}/${id}`);
+      await api.delete(`${API_ENDPOINTS.ENVIRONMENTS}${id}`);
       message.success("删除成功");
       fetchEnvironments();
     } catch {
@@ -101,7 +96,7 @@ const Environments: React.FC = () => {
       const values = await form.validateFields();
       if (editingEnvironment) {
         await api.put(
-          `${API_ENDPOINTS.ENVIRONMENTS}/${editingEnvironment.id}`,
+          `${API_ENDPOINTS.ENVIRONMENTS}${editingEnvironment.id}`,
           values
         );
         message.success("更新成功");

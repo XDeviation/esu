@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Layout, Menu, theme, Space, Button, Typography, Drawer } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
-  EnvironmentOutlined,
-  AppstoreOutlined,
   TagsOutlined,
   BarChartOutlined,
   LineChartOutlined,
@@ -69,16 +67,11 @@ const Dashboard: React.FC = () => {
   }, [location.pathname]);
 
   const menuItems = [
-    {
-      key: "environments",
-      icon: <EnvironmentOutlined />,
-      label: "环境管理",
-    },
-    {
-      key: "decks",
-      icon: <AppstoreOutlined />,
-      label: "卡组管理",
-    },
+    ...(isAdmin || isModerator ? [{
+      key: "admin",
+      icon: <SettingOutlined />,
+      label: "管理面板",
+    }] : []),
     {
       key: "match-types",
       icon: <TagsOutlined />,
@@ -104,11 +97,6 @@ const Dashboard: React.FC = () => {
       icon: <TableOutlined />,
       label: "梯度表（开发中）",
     },
-    ...(isAdmin || isModerator ? [{
-      key: 'prior-knowledge',
-      icon: <SettingOutlined />,
-      label: '梯度表-先验数据',
-    }] : []),
   ];
 
   const handleMenuClick = ({ key }: { key: string }) => {

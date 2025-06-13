@@ -7,6 +7,7 @@ import BatchMatchModal from "./BatchMatchModal";
 import { handleBatchSubmit as submitBatchMatch } from "../utils/matchResults";
 import { MatchType } from "../types";
 import type { TableProps } from 'antd';
+import { AxiosError } from "axios";
 
 interface MatchResult {
   id: number;
@@ -160,11 +161,15 @@ const MatchResults: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await api.delete(`${API_ENDPOINTS.MATCH_RESULTS}${id}/`);
+      await api.delete(`${API_ENDPOINTS.MATCH_RESULTS}${id}`);
       message.success("删除成功");
       fetchMatchResults();
-    } catch {
-      message.error("删除失败");
+    } catch (error) {
+      if (error instanceof AxiosError && error.response?.status === 403) {
+        message.error("您没有权限执行此操作");
+      } else {
+        message.error("删除失败");
+      }
     }
   };
 

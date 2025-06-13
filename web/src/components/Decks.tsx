@@ -17,8 +17,8 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CopyOutlined } from "@ant-design/icons";
 import api from "../config/api";
 import { API_ENDPOINTS } from "../config/api";
-import { useLocation } from "react-router-dom";
 import type { TableProps } from 'antd';
+import { AxiosError } from "axios";
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -55,7 +55,6 @@ const Decks: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const [form] = Form.useForm();
-  const location = useLocation();
   const { message } = App.useApp();
 
   const fetchDecks = useCallback(async () => {
@@ -90,14 +89,11 @@ const Decks: React.FC = () => {
     }
   }, []);
 
-  // 监听路由变化
   useEffect(() => {
-    if (location.pathname === "/decks") {
-      fetchDecks();
-      fetchEnvironments();
-      checkAdminStatus();
-    }
-  }, [location.pathname, fetchDecks, fetchEnvironments, checkAdminStatus]);
+    fetchDecks();
+    fetchEnvironments();
+    checkAdminStatus();
+  }, [fetchDecks, fetchEnvironments, checkAdminStatus]);
 
   const handleCreate = () => {
     if (!isModerator) {
@@ -130,11 +126,30 @@ const Decks: React.FC = () => {
       return;
     }
     try {
-      await api.delete(`${API_ENDPOINTS.DECKS}${id}/`);
+      await api.delete(`${API_ENDPOINTS.DECKS}${id}`);
       message.success("删除成功");
       fetchDecks();
     } catch (error) {
       message.error("删除失败");
+    }
+  };
+
+  // 修改验证函数
+  const validateComposition = (composition: any): boolean => {
+    if (!composition) {
+      return true; // 允许为空
+    }
+
+    try {
+      const parsed = JSON.parse(composition);
+      if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+        message.error("卡组构成必须为正确的json格式");
+        return false;
+      }
+      return true;
+    } catch (error) {
+      message.error("卡组构成格式错误，请检查 JSON 格式");
+      return false;
     }
   };
 
@@ -143,13 +158,22 @@ const Decks: React.FC = () => {
       const values = await form.validateFields();
 
       // 处理卡组构成
-      if (values.composition) {
-        try {
-          values.composition = JSON.parse(values.composition);
-        } catch (error) {
-          message.error("卡组构成格式错误，请检查 JSON 格式");
+      if (values.composition && values.composition.trim() !== '') {
+        if (!validateComposition(values.composition)) {
           return;
         }
+        // 解析为对象
+        values.composition = JSON.parse(values.composition);
+      } else {
+        values.composition = null;
+      }
+
+      // 处理空字符串的情况
+      if (values.deck_code === '') {
+        values.deck_code = null;
+      }
+      if (values.description === '') {
+        values.description = null;
       }
 
       // 获取当前用户信息
@@ -160,17 +184,76 @@ const Decks: React.FC = () => {
       }
 
       if (editingDeck) {
+        // 编辑时只发送修改的字段
+        const updatedValues = {
+          name: values.name,
+          environment_id: values.environment_id,
+          description: values.description,
+          composition: values.composition,
+          deck_code: values.deck_code,
+          author_id: values.author_id,  // 使用用户输入的作者信息
+        };
         await api.put(
-          `${API_ENDPOINTS.DECKS}${editingDeck.id}/`,
-          values
+          `${API_ENDPOINTS.DECKS}${editingDeck.id}`,
+          updatedValues
         );
       } else {
+        // 创建时使用用户输入的作者信息
         await api.post(API_ENDPOINTS.DECKS, values);
       }
       setModalVisible(false);
       fetchDecks();
     } catch (error) {
-      message.error("操作失败");
+      console.error('提交卡组失败:', error);
+      
+      try {
+        if (error instanceof AxiosError && error.response?.data) {
+          const errorData = error.response.data;
+          let errorMessage = "操作失败";
+
+          if (typeof errorData === 'string') {
+            errorMessage = errorData;
+          } else if (errorData.detail) {
+            if (Array.isArray(errorData.detail)) {
+              errorMessage = errorData.detail.map((err: any) => err.msg).join('\n');
+            } else {
+              errorMessage = errorData.detail;
+            }
+          } else if (errorData.non_field_errors) {
+            errorMessage = errorData.non_field_errors[0];
+          } else {
+            // 处理字段错误
+            const fieldErrors = Object.entries(errorData)
+              .map(([field, errors]) => {
+                try {
+                  if (Array.isArray(errors)) {
+                    return `${field}: ${errors[0]}`;
+                  } else if (typeof errors === 'object' && errors !== null) {
+                    // 处理嵌套的错误对象
+                    if ('msg' in errors) {
+                      return `${field}: ${errors.msg}`;
+                    }
+                    return `${field}: ${JSON.stringify(errors)}`;
+                  }
+                  return `${field}: ${String(errors)}`;
+                } catch (e) {
+                  console.error('处理错误信息失败:', e);
+                  return `${field}: 未知错误`;
+                }
+              })
+              .filter(Boolean)
+              .join('\n');
+            errorMessage = fieldErrors || "操作失败";
+          }
+
+          message.error(errorMessage);
+        } else {
+          message.error("操作失败，请稍后重试");
+        }
+      } catch (e) {
+        console.error('处理错误失败:', e);
+        message.error("操作失败，请稍后重试");
+      }
     }
   };
 
