@@ -202,15 +202,24 @@ const PriorKnowledgeTable: React.FC = () => {
         dataIndex: 'deck',
         key: 'deck',
         fixed: 'left',
-        width: 120,
-        render: (deck: Deck) => deck.name,
+        width: window.innerWidth < 768 ? 40 : 60,
+        render: (deck: Deck) => (
+          <div style={{ 
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {deck.name}
+          </div>
+        ),
         ellipsis: true,
       },
       ...decks.map(deck => ({
         title: deck.name,
         dataIndex: deck.id,
         key: deck.id,
-        width: 120,
+        width: window.innerWidth < 768 ? 100 : 120,
         render: (value: any) => {
           if (!value) return null;
           const { prior } = value;
@@ -228,7 +237,8 @@ const PriorKnowledgeTable: React.FC = () => {
                   cursor: 'pointer',
                   color: '#999',
                   textAlign: 'center',
-                  padding: '4px 0'
+                  padding: '4px 0',
+                  fontSize: window.innerWidth < 768 ? '12px' : '14px'
                 }}
                 onClick={() => handleCellClick(value)}
               >
@@ -248,12 +258,13 @@ const PriorKnowledgeTable: React.FC = () => {
                   ? `rgba(0, 255, 0, ${winRateValue * 0.2})`
                   : `rgba(255, 0, 0, ${(1 - winRateValue) * 0.2})`,
                 textAlign: 'center',
-                padding: '4px 0'
+                padding: '4px 0',
+                fontSize: window.innerWidth < 768 ? '12px' : '14px'
               }}
               onClick={() => handleCellClick(value)}
             >
               <div>{winRate}%</div>
-              <div style={{ fontSize: '12px', color: '#999' }}>
+              <div style={{ fontSize: window.innerWidth < 768 ? '10px' : '12px', color: '#999' }}>
                 {prior.prior_wins}/{prior.prior_matches}
               </div>
             </div>
@@ -309,6 +320,17 @@ const PriorKnowledgeTable: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  // 添加窗口大小变化监听
+  useEffect(() => {
+    const handleResize = () => {
+      // 强制重新渲染表格
+      setDecks([...decks]);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [decks]);
 
   return (
     <Card bodyStyle={{ padding: '12px' }}>
